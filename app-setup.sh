@@ -471,6 +471,10 @@ case $DEPLOY_CHOICE in
         if [ ! -d "$PARENT_DIR" ]; then
             log_info "Creating parent directory: $PARENT_DIR"
             mkdir -p "$PARENT_DIR"
+            # Set ownership so user can create subdirectories
+            chown "$FINAL_USER:$WEB_SERVER_GROUP" "$PARENT_DIR"
+            chmod 755 "$PARENT_DIR"
+            log_success "Parent directory created with proper permissions"
         fi
 
         # Add Git host to known_hosts
