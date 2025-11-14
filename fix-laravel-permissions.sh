@@ -36,6 +36,11 @@ echo "========================================="
 echo "  Laravel Permissions Fixer"
 echo "========================================="
 echo ""
+echo "This script sets correct ownership and permissions for Laravel."
+echo ""
+echo "RECOMMENDED: For production, use a dedicated Laravel user instead"
+echo "of the web server user. Run setup-laravel-user.sh first."
+echo ""
 
 # Check if running as root
 if [ "$EUID" -ne 0 ]; then
@@ -120,11 +125,12 @@ fi
 # Prompt for web server if not detected or user wants to specify
 if [ -z "$WEB_SERVER" ]; then
     echo ""
-    echo "Select your web server:"
-    echo "1) Apache"
-    echo "2) Nginx"
-    echo "3) Custom (I'll enter the user manually)"
-    read -p "Enter choice [1-3]: " webserver_choice
+    echo "Select ownership configuration:"
+    echo "1) Use web server user (Apache)"
+    echo "2) Use web server user (Nginx)"
+    echo "3) Use dedicated Laravel user (recommended for production)"
+    echo "4) Custom (I'll specify manually)"
+    read -p "Enter choice [1-4]: " webserver_choice
 
     case $webserver_choice in
         1)
@@ -134,6 +140,26 @@ if [ -z "$WEB_SERVER" ]; then
             WEB_SERVER="nginx"
             ;;
         3)
+            echo ""
+            log_info "Using dedicated Laravel user approach"
+            echo ""
+            echo "Available users with home directories:"
+            ls -1 /home/ 2>/dev/null || echo "  (none found)"
+            echo ""
+            read -p "Enter the Laravel user (e.g., laraveladmin, deploy): " LARAVEL_USER
+            if [ -z "$LARAVEL_USER" ]; then
+                log_error "Username cannot be empty"
+                exit 1
+            fi
+            if ! id "$LARAVEL_USER" &>/dev/null; then
+                log_error "User '$LARAVEL_USER' does not exist!"
+                log_info "Run setup-laravel-user.sh first to create the user"
+                exit 1
+            fi
+            WEB_SERVER="custom"
+            CUSTOM_USER=$LARAVEL_USER
+            ;;
+        4)
             WEB_SERVER="custom"
             ;;
         *)

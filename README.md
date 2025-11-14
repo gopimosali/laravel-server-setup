@@ -12,8 +12,9 @@ Automated installation script for PHP 8.4 with support for Ubuntu and Alpine Lin
 - **`supervisor-horizon.conf.sample`** - Supervisor config for Laravel Horizon queue worker
 - **`supervisor-pulse.conf.sample`** - Supervisor config for Laravel Pulse monitoring
 - **`supervisor-schedule.conf.sample`** - Supervisor config for Laravel task scheduler
-- **`update-supervisor-user.sh`** - Utility to update user in Supervisor configs based on web server
-- **`fix-laravel-permissions.sh`** - Utility to set correct Laravel file ownership and permissions
+- **`setup-laravel-user.sh`** - Create dedicated user for Laravel services (RECOMMENDED)
+- **`update-supervisor-user.sh`** - Update user in Supervisor configs
+- **`fix-laravel-permissions.sh`** - Set correct Laravel file ownership and permissions
 - **`README.md`** - This documentation
 
 ## Features
@@ -381,36 +382,44 @@ sudo systemctl enable supervisor
 sudo systemctl start supervisor
 ```
 
-#### Automated Setup (Recommended)
+#### Automated Setup (Recommended for Production)
 
-Use the provided utility scripts to automatically configure supervisor files and Laravel permissions:
+**Best Practice:** Create a dedicated user for running Laravel services instead of using the web server user directly. This provides better security and flexibility.
 
-**1. Update Supervisor User Configuration:**
+**Option A: Dedicated Laravel User (RECOMMENDED for Production)**
 
 ```bash
-# Run the update script - it will detect your web server
+# Step 1: Create a dedicated Laravel user
+chmod +x setup-laravel-user.sh
+sudo ./setup-laravel-user.sh
+
+# This script will:
+# - Prompt for a username (e.g., laraveladmin, deploy)
+# - Create the user with a password
+# - Add user to sudo group for server management
+# - Add user to web server group for file access
+# - Update all supervisor config files to use this user
+# - Optionally set up Laravel file permissions
+```
+
+After running this script, supervisor processes will run as your dedicated user, providing:
+- **Better Security**: Separation from web server user
+- **Easier Management**: Single user for all Laravel services
+- **Sudo Access**: Can manage server without switching users
+- **Clean Permissions**: Files owned by dedicated user, accessible by web server
+
+**Option B: Web Server User (Simpler, for Development)**
+
+If you prefer to use the web server user (www-data, nginx, apache):
+
+```bash
+# Step 1: Update Supervisor configs
 chmod +x update-supervisor-user.sh
 ./update-supervisor-user.sh
 
-# The script will:
-# - Auto-detect your web server (Apache/Nginx)
-# - Determine the correct user (www-data, nginx, apache)
-# - Update all supervisor config files
-# - Create backups of original files
-```
-
-**2. Fix Laravel File Permissions:**
-
-```bash
-# Run the permissions fixer (requires sudo)
+# Step 2: Fix Laravel permissions
 chmod +x fix-laravel-permissions.sh
 sudo ./fix-laravel-permissions.sh
-
-# The script will:
-# - Auto-detect your web server
-# - Set correct ownership for your Laravel app
-# - Apply proper permissions (755 for dirs, 644 for files)
-# - Make storage/ and bootstrap/cache/ writable (775)
 ```
 
 #### Manual Setup Process
@@ -565,60 +574,176 @@ sudo supervisorctl update
    ```
 5. **Monitoring**: Regularly check logs and service status to ensure everything is running correctly
 
-## Laravel Deployment Example
+### User Configuration Best Practices
+
+#### Production Setup (Recommended)
+
+For production environments, use a **dedicated user** for Laravel services:
 
 ```bash
-# Install Laravel
+# Create dedicated Laravel user
+sudo ./setup-laravel-user.sh
+
+# Example user: laraveladmin, deploy, laravel, etc.
+```
+
+**Benefits:**
+- **Security Isolation**: Laravel processes run separately from web server
+- **Permission Management**: Clean separation of concerns
+- **Easier Debugging**: Clear ownership of processes and files
+- **Sudo Access**: User can manage server and Laravel without switching
+- **Group Membership**: User belongs to web server group for file sharing
+
+**File Ownership Pattern:**
+```
+Owner: laraveladmin (your dedicated user)
+Group: www-data (web server group)
+Directories: 755
+Files: 644
+storage/: 775 (owner + group can write)
+bootstrap/cache/: 775 (owner + group can write)
+```
+
+This allows:
+- Your dedicated user to manage Laravel files
+- Web server to read files and write to storage/cache
+- Supervisor processes to run as dedicated user
+
+#### Development Setup (Simpler)
+
+For development or testing, you can use the **web server user**:
+
+```bash
+# Update configs to use www-data/nginx/apache
+./update-supervisor-user.sh
+
+# Set permissions
+sudo ./fix-laravel-permissions.sh
+```
+
+**Trade-offs:**
+- ✅ Simpler setup
+- ✅ No additional user management
+- ❌ Less secure (services run as web server user)
+- ❌ Mixed ownership of processes
+
+## Laravel Deployment Example
+
+### Production Deployment (with Dedicated User)
+
+```bash
+# 1. Install Laravel
 composer create-project laravel/laravel my-app
 cd my-app
 
-# Configure your .env file
+# 2. Configure environment
 cp .env.example .env
 php artisan key:generate
 
-# Option 1: Use automated permissions fixer (Recommended)
+# 3. Set up dedicated Laravel user (run from laravel-server-setup directory)
 cd /path/to/laravel-server-setup
-sudo ./fix-laravel-permissions.sh
-# Then enter your Laravel path when prompted
+sudo ./setup-laravel-user.sh
+# Follow prompts:
+# - Username: laraveladmin (or your choice)
+# - Password: [set secure password]
+# - Laravel path: /var/www/html/my-app
 
-# Option 2: Manual permissions setup
-sudo chown -R www-data:www-data /path/to/my-app
-sudo find /path/to/my-app -type d -exec chmod 755 {} \;
-sudo find /path/to/my-app -type f -exec chmod 644 {} \;
-sudo chmod -R 775 /path/to/my-app/storage
-sudo chmod -R 775 /path/to/my-app/bootstrap/cache
-sudo chmod 755 /path/to/my-app/artisan
+# 4. Configure database (if installed)
+# Edit .env with database credentials
+nano .env
 
-# Run migrations (if database installed)
+# 5. Run migrations
+cd /var/www/html/my-app
 php artisan migrate
 
-# Install frontend dependencies (if Node.js installed)
+# 6. Install and build frontend (if Node.js installed)
 npm install
+npm run build
 
-# Build frontend assets
-npm run build       # For production
-npm run dev         # For development
+# 7. Set up Supervisor services
+cd /path/to/laravel-server-setup
+sudo cp supervisor-*.conf.sample /etc/supervisor/conf.d/
+# Edit each config to update Laravel paths
+sudo nano /etc/supervisor/conf.d/laravel-horizon.conf
+# Update: command=php /var/www/html/my-app/artisan horizon
+
+# 8. Start services
+sudo supervisorctl reread
+sudo supervisorctl update
+sudo supervisorctl start all
+```
+
+### Development/Testing Deployment (Simpler)
+
+```bash
+# 1. Install Laravel
+composer create-project laravel/laravel my-app
+cd my-app
+
+# 2. Configure environment
+cp .env.example .env
+php artisan key:generate
+
+# 3. Set permissions using web server user
+cd /path/to/laravel-server-setup
+sudo ./fix-laravel-permissions.sh
+# Select option 1 (Apache) or 2 (Nginx)
+# Enter Laravel path when prompted
+
+# 4. Configure database and migrate
+nano .env
+php artisan migrate
+
+# 5. Install frontend dependencies
+npm install
+npm run dev
 ```
 
 ### File Permissions Guide
 
 **Automated (Recommended):**
 ```bash
-# Use the fix-laravel-permissions.sh script
+# Option 1: During user setup (setup-laravel-user.sh prompts for this)
+sudo ./setup-laravel-user.sh
+
+# Option 2: Standalone permissions fixer
 sudo ./fix-laravel-permissions.sh
 ```
 
-**Manual Setup:**
-- **Directories**: 755 (rwxr-xr-x)
-- **Files**: 644 (rw-r--r--)
-- **storage/**: 775 (rwxrwxr-x) - Must be writable
-- **bootstrap/cache/**: 775 (rwxrwxr-x) - Must be writable
-- **.env**: 600 (rw-------) - Secure sensitive data
-- **Owner**: Web server user (www-data, nginx, apache)
+**Manual Setup (Production with Dedicated User):**
+```bash
+# Assuming user: laraveladmin, web server group: www-data
+sudo chown -R laraveladmin:www-data /var/www/html/my-app
+sudo find /var/www/html/my-app -type d -exec chmod 755 {} \;
+sudo find /var/www/html/my-app -type f -exec chmod 644 {} \;
+sudo chmod -R 775 /var/www/html/my-app/storage
+sudo chmod -R 775 /var/www/html/my-app/bootstrap/cache
+sudo chmod 755 /var/www/html/my-app/artisan
+sudo chmod 640 /var/www/html/my-app/.env
+```
 
-**Important:** The web server user must have write access to:
-- `storage/` and all subdirectories
-- `bootstrap/cache/`
+**Manual Setup (Development with Web Server User):**
+```bash
+# Using www-data (Ubuntu/Debian)
+sudo chown -R www-data:www-data /var/www/html/my-app
+sudo find /var/www/html/my-app -type d -exec chmod 755 {} \;
+sudo find /var/www/html/my-app -type f -exec chmod 644 {} \;
+sudo chmod -R 775 /var/www/html/my-app/storage
+sudo chmod -R 775 /var/www/html/my-app/bootstrap/cache
+sudo chmod 755 /var/www/html/my-app/artisan
+```
+
+**Permission Reference:**
+- **Directories**: 755 (rwxr-xr-x) - Owner can read/write/execute, others can read/execute
+- **Files**: 644 (rw-r--r--) - Owner can read/write, others can read
+- **storage/**: 775 (rwxrwxr-x) - Owner and group can write (required for logs, cache)
+- **bootstrap/cache/**: 775 (rwxrwxr-x) - Owner and group can write (required for Laravel)
+- **.env**: 640 (rw-r-----) - Owner can read/write, group can read, others no access
+- **artisan**: 755 (rwxr-xr-x) - Executable script
+
+**Important:** Both the owner and web server group must have write access to:
+- `storage/` and all subdirectories (logs, framework, app)
+- `bootstrap/cache/` (compiled services, packages, routes, config)
 
 **Note**: For detailed web server configuration, see the [Configuration](#configuration) section above which includes complete sample files for both Apache and Nginx.
 

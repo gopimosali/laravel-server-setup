@@ -36,6 +36,12 @@ echo "========================================="
 echo "  Supervisor Config User Updater"
 echo "========================================="
 echo ""
+echo "This script updates the user in supervisor config files."
+echo ""
+echo "IMPORTANT: For production setups, it's recommended to create"
+echo "a dedicated user for Laravel services instead of using the"
+echo "web server user. Use setup-laravel-user.sh for this."
+echo ""
 
 # Check if running as root (optional for this script)
 if [ "$EUID" -eq 0 ]; then
@@ -119,11 +125,12 @@ fi
 # Prompt for web server if not detected or user wants to specify
 if [ -z "$WEB_SERVER" ]; then
     echo ""
-    echo "Select your web server:"
-    echo "1) Apache"
-    echo "2) Nginx"
-    echo "3) Custom (I'll enter the user manually)"
-    read -p "Enter choice [1-3]: " webserver_choice
+    echo "Select user configuration method:"
+    echo "1) Use web server user (Apache: www-data/apache)"
+    echo "2) Use web server user (Nginx: www-data/nginx)"
+    echo "3) Use dedicated Laravel user (recommended for production)"
+    echo "4) Custom (I'll enter the user manually)"
+    read -p "Enter choice [1-4]: " webserver_choice
 
     case $webserver_choice in
         1)
@@ -133,6 +140,20 @@ if [ -z "$WEB_SERVER" ]; then
             WEB_SERVER="nginx"
             ;;
         3)
+            echo ""
+            log_info "Using dedicated Laravel user approach"
+            echo "Available users with home directories:"
+            ls -1 /home/ 2>/dev/null || echo "  (none found)"
+            echo ""
+            read -p "Enter the Laravel user (e.g., laraveladmin, deploy): " LARAVEL_USER
+            if [ -z "$LARAVEL_USER" ]; then
+                log_error "Username cannot be empty"
+                exit 1
+            fi
+            WEB_SERVER="custom"
+            CUSTOM_USER=$LARAVEL_USER
+            ;;
+        4)
             WEB_SERVER="custom"
             ;;
         *)
