@@ -11,7 +11,6 @@ Automated installation script for PHP 8.4 with support for Ubuntu and Alpine Lin
 chmod +x laravel-server-setup.sh
 sudo ./laravel-server-setup.sh
 # Installs PHP 8.4 and web server (if needed)
-# Installs Git for repository deployments
 # Installs Supervisor
 
 # 2. Deploy your Laravel application (run for each app)
@@ -82,6 +81,7 @@ See the [Configuration](#configuration) section for detailed instructions on usi
 - Root/sudo access
 - Supported OS: Ubuntu 20.04+, Debian 11+, or Alpine Linux
 - Internet connection
+- Git (for cloning this repository and Git-based deployments)
 
 ## Usage
 
@@ -412,6 +412,8 @@ This script will:
 - Install Supervisor if needed
 - Save server configuration
 
+Note: Git is assumed to be already installed (required to clone this repository)
+
 **Step 2: Application Deployment (Per Laravel App)**
 
 ```bash
@@ -658,7 +660,7 @@ Deploy directly from GitHub, GitLab, or Bitbucket with automatic SSH key setup:
 # 1. ONE-TIME: Prepare server (if not done already)
 cd /path/to/laravel-server-setup
 sudo ./laravel-server-setup.sh
-# This installs PHP, web server, Git, and Supervisor
+# This installs PHP, web server, and Supervisor
 
 # 2. Deploy from Git repository
 sudo ./laravel-app-setup.sh
