@@ -2,20 +2,52 @@
 
 Automated installation script for PHP 8.4 with support for Ubuntu and Alpine Linux.
 
+## Quick Start
+
+### Complete Laravel Server Setup (3 Simple Steps)
+
+```bash
+# 1. Install PHP 8.4 and web server
+chmod +x setup-php84.sh
+sudo ./setup-php84.sh
+
+# 2. Configure server for Laravel (one-time setup)
+chmod +x laravel-server-setup.sh
+sudo ./laravel-server-setup.sh
+# Choose: Production or Development
+# Enter username (production) or use web server user (development)
+
+# 3. Deploy your Laravel application
+chmod +x laravel-app-setup.sh
+sudo ./laravel-app-setup.sh
+# Enter Laravel app path
+# Select services (Horizon, Reverb, Pulse, Schedule)
+```
+
+That's it! Your Laravel application is now configured with proper permissions and services.
+
 ## Repository Contents
 
-- **`setup-php84.sh`** - Main installation script
+### Main Setup Scripts (Recommended)
+- **`laravel-server-setup.sh`** - **⭐ ONE-TIME** server configuration (environment, user, supervisor)
+- **`laravel-app-setup.sh`** - **Per-application** setup (run for each Laravel app)
+
+### PHP & Web Server Setup
+- **`setup-php84.sh`** - PHP 8.4 installation script
 - **`php.ini.sample`** - Production-ready PHP configuration
 - **`apache-virtualhost.conf.sample`** - Apache virtual host template
 - **`nginx-virtualhost.conf.sample`** - Nginx server block template
+
+### Supervisor Configuration Templates
 - **`supervisor-reverb.conf.sample`** - Supervisor config for Laravel Reverb WebSocket server
 - **`supervisor-horizon.conf.sample`** - Supervisor config for Laravel Horizon queue worker
 - **`supervisor-pulse.conf.sample`** - Supervisor config for Laravel Pulse monitoring
 - **`supervisor-schedule.conf.sample`** - Supervisor config for Laravel task scheduler
-- **`setup-laravel-user.sh`** - Create dedicated user for Laravel services (RECOMMENDED)
+
+### Advanced/Individual Scripts (Optional)
+- **`setup-laravel-user.sh`** - Create dedicated user for Laravel services
 - **`update-supervisor-user.sh`** - Update user in Supervisor configs
 - **`fix-laravel-permissions.sh`** - Set correct Laravel file ownership and permissions
-- **`README.md`** - This documentation
 
 ## Features
 
@@ -370,57 +402,72 @@ The repository includes Supervisor configuration files for managing Laravel's lo
 3. **Laravel Pulse** (`supervisor-pulse.conf.sample`) - Application monitoring
 4. **Laravel Scheduler** (`supervisor-schedule.conf.sample`) - Task scheduling
 
-#### Installing Supervisor
+#### Streamlined Setup (RECOMMENDED)
+
+Use the integrated setup scripts for the easiest experience:
+
+**Step 1: Server Setup (One-Time)**
 
 ```bash
-# Install Supervisor (Ubuntu)
-sudo apt update
-sudo apt install supervisor
-
-# Enable and start Supervisor
-sudo systemctl enable supervisor
-sudo systemctl start supervisor
+chmod +x laravel-server-setup.sh
+sudo ./laravel-server-setup.sh
 ```
 
-#### Automated Setup (Recommended for Production)
+This script will:
+- Prompt for environment (Production or Development)
+- Create dedicated user (Production) or use web server user (Development)
+- Install Supervisor if needed
+- Configure all supervisor templates with correct user
+- Save configuration for app deployments
 
-**Best Practice:** Create a dedicated user for running Laravel services instead of using the web server user directly. This provides better security and flexibility.
-
-**Option A: Dedicated Laravel User (RECOMMENDED for Production)**
+**Step 2: Application Setup (Per Laravel App)**
 
 ```bash
-# Step 1: Create a dedicated Laravel user
+chmod +x laravel-app-setup.sh
+sudo ./laravel-app-setup.sh
+```
+
+This script will:
+- Read server configuration from step 1
+- Set correct ownership and permissions for your Laravel app
+- Let you select which services to enable (Horizon, Reverb, Pulse, Schedule)
+- Copy and configure supervisor configs with correct paths
+- Start the selected services
+
+**Benefits of Streamlined Approach:**
+- ✅ Single command workflow
+- ✅ Environment-aware configuration (production vs development)
+- ✅ Automatic path and user configuration
+- ✅ Service selection per application
+- ✅ Can deploy multiple Laravel apps easily
+- ✅ Saves configuration between runs
+
+#### Alternative: Individual Setup Scripts
+
+If you prefer more control or manual configuration:
+
+**Option A: Create Dedicated Laravel User**
+
+```bash
 chmod +x setup-laravel-user.sh
 sudo ./setup-laravel-user.sh
-
-# This script will:
-# - Prompt for a username (e.g., laraveladmin, deploy)
-# - Create the user with a password
-# - Add user to sudo group for server management
-# - Add user to web server group for file access
-# - Update all supervisor config files to use this user
-# - Optionally set up Laravel file permissions
 ```
 
-After running this script, supervisor processes will run as your dedicated user, providing:
-- **Better Security**: Separation from web server user
-- **Easier Management**: Single user for all Laravel services
-- **Sudo Access**: Can manage server without switching users
-- **Clean Permissions**: Files owned by dedicated user, accessible by web server
-
-**Option B: Web Server User (Simpler, for Development)**
-
-If you prefer to use the web server user (www-data, nginx, apache):
+**Option B: Update Supervisor User Only**
 
 ```bash
-# Step 1: Update Supervisor configs
 chmod +x update-supervisor-user.sh
 ./update-supervisor-user.sh
+```
 
-# Step 2: Fix Laravel permissions
+**Option C: Fix Permissions Only**
+
+```bash
 chmod +x fix-laravel-permissions.sh
 sudo ./fix-laravel-permissions.sh
 ```
+
+**Note:** The streamlined scripts (`laravel-server-setup.sh` and `laravel-app-setup.sh`) are recommended as they handle all of this automatically.
 
 #### Manual Setup Process
 
@@ -629,7 +676,9 @@ sudo ./fix-laravel-permissions.sh
 
 ## Laravel Deployment Example
 
-### Production Deployment (with Dedicated User)
+### Streamlined Deployment (RECOMMENDED)
+
+This is the easiest and recommended approach for both production and development:
 
 ```bash
 # 1. Install Laravel
@@ -640,63 +689,86 @@ cd my-app
 cp .env.example .env
 php artisan key:generate
 
-# 3. Set up dedicated Laravel user (run from laravel-server-setup directory)
-cd /path/to/laravel-server-setup
-sudo ./setup-laravel-user.sh
-# Follow prompts:
-# - Username: laraveladmin (or your choice)
-# - Password: [set secure password]
-# - Laravel path: /var/www/html/my-app
-
-# 4. Configure database (if installed)
-# Edit .env with database credentials
+# 3. Configure database
 nano .env
+# Set DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD
 
-# 5. Run migrations
-cd /var/www/html/my-app
+# 4. Run migrations
 php artisan migrate
 
-# 6. Install and build frontend (if Node.js installed)
+# 5. Install and build frontend (if Node.js installed)
 npm install
-npm run build
+npm run build  # For production
 
-# 7. Set up Supervisor services
+# 6. Deploy with integrated setup (from laravel-server-setup directory)
 cd /path/to/laravel-server-setup
-sudo cp supervisor-*.conf.sample /etc/supervisor/conf.d/
-# Edit each config to update Laravel paths
-sudo nano /etc/supervisor/conf.d/laravel-horizon.conf
-# Update: command=php /var/www/html/my-app/artisan horizon
 
-# 8. Start services
-sudo supervisorctl reread
-sudo supervisorctl update
+# If first Laravel app on this server, run server setup first:
+sudo ./laravel-server-setup.sh
+# Choose: 1) Production or 2) Development
+# Enter username (if production) or uses web server user (if development)
+
+# Then deploy your application:
+sudo ./laravel-app-setup.sh
+# Enter: /var/www/html/my-app
+# Select services: 1 2 4 (for Horizon, Reverb, Schedule)
+
+# 7. Done! Services are configured and running
+sudo supervisorctl status
+```
+
+**For additional Laravel apps on the same server:**
+Just run `sudo ./laravel-app-setup.sh` again - it reuses the server configuration!
+
+### Manual Deployment (Advanced)
+
+If you prefer manual control over each step:
+
+**Production Setup:**
+
+```bash
+# Install Laravel
+composer create-project laravel/laravel my-app
+cd my-app
+cp .env.example .env
+php artisan key:generate
+
+# Create dedicated user
+cd /path/to/laravel-server-setup
+sudo ./setup-laravel-user.sh
+
+# Configure and migrate
+nano /var/www/html/my-app/.env
+cd /var/www/html/my-app
+php artisan migrate
+npm install && npm run build
+
+# Copy and configure supervisor files manually
+sudo cp supervisor-horizon.conf.sample /etc/supervisor/conf.d/laravel-horizon.conf
+sudo nano /etc/supervisor/conf.d/laravel-horizon.conf
+# Update paths...
+
+sudo supervisorctl reread && sudo supervisorctl update
 sudo supervisorctl start all
 ```
 
-### Development/Testing Deployment (Simpler)
+**Development Setup:**
 
 ```bash
-# 1. Install Laravel
+# Install Laravel
 composer create-project laravel/laravel my-app
 cd my-app
-
-# 2. Configure environment
 cp .env.example .env
 php artisan key:generate
 
-# 3. Set permissions using web server user
+# Fix permissions
 cd /path/to/laravel-server-setup
 sudo ./fix-laravel-permissions.sh
-# Select option 1 (Apache) or 2 (Nginx)
-# Enter Laravel path when prompted
 
-# 4. Configure database and migrate
+# Configure and run
 nano .env
 php artisan migrate
-
-# 5. Install frontend dependencies
-npm install
-npm run dev
+npm install && npm run dev
 ```
 
 ### File Permissions Guide
