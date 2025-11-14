@@ -12,6 +12,7 @@ Automated installation script for PHP 8.4 with support for Ubuntu and Alpine Lin
   - Web server selection (Apache or Nginx)
   - Database server installation (MySQL Server, PostgreSQL Server, or None)
   - Redis server installation option
+  - Optional extensions (Imagick, Xdebug, Memcached, APCu, MongoDB, LDAP, IMAP, SSH2, Swoole, AMQP)
 - **Automatic Composer Installation**
 - **Complete Laravel/PHP Application Stack**
 
@@ -52,6 +53,22 @@ When running on Ubuntu, you'll be prompted to make the following selections:
 - **Yes** - Install Redis server locally
 - **No** - Skip server installation (you can connect to remote Redis using the installed extension)
 
+#### 4. Additional PHP Extensions (Optional)
+You can select additional extensions based on your needs (multi-select):
+
+1. **Imagick** - Advanced image processing with ImageMagick
+2. **Xdebug** - Debugging and profiling tool (recommended for development)
+3. **Memcached** - Memcached caching support
+4. **APCu** - APCu user cache for better performance
+5. **MongoDB** - MongoDB NoSQL database support
+6. **LDAP** - LDAP directory access
+7. **IMAP** - Email IMAP support
+8. **SSH2** - SSH2 protocol support
+9. **Swoole** - High-performance async framework (installed via PECL)
+10. **AMQP** - RabbitMQ/AMQP messaging support
+
+Simply enter the numbers space-separated (e.g., "1 2 4") or press Enter to skip.
+
 ### Alpine Installation
 
 Alpine installation is fully automated and includes:
@@ -89,6 +106,18 @@ The script installs the following PHP 8.4 extensions:
 
 ### Cache Extensions (Always Installed)
 - `redis` - Redis support
+
+### Optional Extensions (Ubuntu - Select During Installation)
+- `imagick` - Advanced image manipulation with ImageMagick
+- `xdebug` - Debugging and profiling (WARNING: disable in production)
+- `memcached` - Memcached cache support
+- `apcu` - APCu opcode cache
+- `mongodb` - MongoDB database driver
+- `ldap` - LDAP directory services
+- `imap` - IMAP email protocol
+- `ssh2` - SSH2 protocol support
+- `swoole` - Async, coroutine-based framework
+- `amqp` - RabbitMQ/AMQP messaging
 
 ## Post-Installation
 
@@ -213,6 +242,40 @@ server {
 }
 ```
 
+## Managing Optional Extensions
+
+### Disabling Xdebug in Production
+
+Xdebug significantly impacts performance and should be disabled in production:
+
+```bash
+# Disable Xdebug (Ubuntu)
+sudo phpdismod xdebug
+sudo systemctl restart php8.4-fpm  # for Nginx
+sudo systemctl restart apache2     # for Apache
+
+# Enable Xdebug for development
+sudo phpenmod xdebug
+sudo systemctl restart php8.4-fpm  # for Nginx
+sudo systemctl restart apache2     # for Apache
+```
+
+### Enabling/Disabling Extensions
+
+```bash
+# List all available modules
+php -m
+
+# Disable an extension
+sudo phpdismod <extension-name>
+
+# Enable an extension
+sudo phpenmod <extension-name>
+
+# Restart web server/PHP-FPM after changes
+sudo systemctl restart php8.4-fpm
+```
+
 ## Troubleshooting
 
 ### PHP-FPM Socket Issues (Ubuntu/Nginx)
@@ -246,7 +309,8 @@ sudo apt install php8.4-<extension-name>
 2. **MySQL**: Run `mysql_secure_installation` after installation
 3. **PostgreSQL**: Configure `pg_hba.conf` for secure access
 4. **PHP**: Review `php.ini` settings for production use
-5. **Updates**: Regularly update packages for security patches
+5. **Xdebug**: ALWAYS disable Xdebug in production environments (significant performance impact and security risk)
+6. **Updates**: Regularly update packages for security patches
 
 ## Uninstallation
 

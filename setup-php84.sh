@@ -66,6 +66,27 @@ install_ubuntu() {
     echo "2) No"
     read -p "Enter choice [1-2]: " redis_choice
 
+    # Prompt for additional PHP extensions
+    echo ""
+    echo "========================================="
+    echo "Additional PHP Extensions (Optional)"
+    echo "========================================="
+    echo "Enter the numbers of extensions you want to install (space-separated, e.g., '1 3 5')"
+    echo "Press Enter to skip all optional extensions"
+    echo ""
+    echo "1) Imagick      - Advanced image processing with ImageMagick"
+    echo "2) Xdebug       - Debugging and profiling tool"
+    echo "3) Memcached    - Memcached caching support"
+    echo "4) APCu         - APCu user cache"
+    echo "5) MongoDB      - MongoDB database support"
+    echo "6) LDAP         - LDAP directory access"
+    echo "7) IMAP         - Email IMAP support"
+    echo "8) SSH2         - SSH2 protocol support"
+    echo "9) Swoole       - High-performance async framework"
+    echo "10) AMQP        - RabbitMQ/AMQP messaging support"
+    echo ""
+    read -p "Enter your choices: " additional_extensions
+
     log_info "Updating package lists..."
     apt-get update
 
@@ -106,7 +127,70 @@ install_ubuntu() {
     log_info "Installing database client extensions (MySQL & PostgreSQL)..."
     log_info "Installing Redis extension..."
 
+    # Process additional extensions
+    if [ -n "$additional_extensions" ]; then
+        log_info "Processing additional extensions..."
+        for ext_num in $additional_extensions; do
+            case $ext_num in
+                1)
+                    log_info "Adding Imagick extension..."
+                    PHP_PACKAGES+=(php8.4-imagick)
+                    ;;
+                2)
+                    log_info "Adding Xdebug extension..."
+                    PHP_PACKAGES+=(php8.4-xdebug)
+                    ;;
+                3)
+                    log_info "Adding Memcached extension..."
+                    PHP_PACKAGES+=(php8.4-memcached)
+                    ;;
+                4)
+                    log_info "Adding APCu extension..."
+                    PHP_PACKAGES+=(php8.4-apcu)
+                    ;;
+                5)
+                    log_info "Adding MongoDB extension..."
+                    PHP_PACKAGES+=(php8.4-mongodb)
+                    ;;
+                6)
+                    log_info "Adding LDAP extension..."
+                    PHP_PACKAGES+=(php8.4-ldap)
+                    ;;
+                7)
+                    log_info "Adding IMAP extension..."
+                    PHP_PACKAGES+=(php8.4-imap)
+                    ;;
+                8)
+                    log_info "Adding SSH2 extension..."
+                    PHP_PACKAGES+=(php8.4-ssh2)
+                    ;;
+                9)
+                    log_info "Adding Swoole extension..."
+                    # Swoole might need PECL installation
+                    PHP_PACKAGES+=(php8.4-dev)
+                    INSTALL_SWOOLE=true
+                    ;;
+                10)
+                    log_info "Adding AMQP extension..."
+                    PHP_PACKAGES+=(php8.4-amqp)
+                    ;;
+                *)
+                    log_warn "Unknown extension number: $ext_num (skipping)"
+                    ;;
+            esac
+        done
+    fi
+
     apt-get install -y "${PHP_PACKAGES[@]}"
+
+    # Install Swoole via PECL if selected
+    if [ "$INSTALL_SWOOLE" = true ]; then
+        log_info "Installing Swoole via PECL..."
+        apt-get install -y build-essential
+        pecl install swoole
+        echo "extension=swoole.so" > /etc/php/8.4/mods-available/swoole.ini
+        phpenmod swoole
+    fi
 
     # Install and configure web server
     case $webserver_choice in
