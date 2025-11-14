@@ -66,6 +66,14 @@ install_ubuntu() {
     echo "2) No"
     read -p "Enter choice [1-2]: " redis_choice
 
+    # Prompt for Node.js installation
+    echo ""
+    echo "Install Node.js? (Required for npm, frontend asset compilation)"
+    echo "1) Node.js LTS (Long Term Support - Recommended)"
+    echo "2) Node.js Current (Latest features)"
+    echo "3) None"
+    read -p "Enter choice [1-3]: " nodejs_choice
+
     # Prompt for additional PHP extensions
     echo ""
     echo "========================================="
@@ -251,6 +259,25 @@ install_ubuntu() {
         log_info "Skipping Redis server installation (Redis extension already installed)..."
     fi
 
+    # Install Node.js
+    case $nodejs_choice in
+        1)
+            log_info "Installing Node.js LTS..."
+            curl -fsSL https://deb.nodesource.com/setup_lts.x | bash -
+            apt-get install -y nodejs
+            log_info "Node.js LTS installed with npm"
+            ;;
+        2)
+            log_info "Installing Node.js Current..."
+            curl -fsSL https://deb.nodesource.com/setup_current.x | bash -
+            apt-get install -y nodejs
+            log_info "Node.js Current installed with npm"
+            ;;
+        3)
+            log_info "Skipping Node.js installation..."
+            ;;
+    esac
+
     # Install Composer
     install_composer
 
@@ -367,6 +394,13 @@ display_versions_ubuntu() {
     if [ "$redis_choice" == "1" ]; then
         redis-server --version 2>/dev/null || echo "Redis: Not installed"
     fi
+
+    case $nodejs_choice in
+        1|2)
+            node --version 2>/dev/null || echo "Node.js: Not installed"
+            npm --version 2>/dev/null | sed 's/^/npm: /' || echo "npm: Not installed"
+            ;;
+    esac
 
     echo ""
     echo "========================================="

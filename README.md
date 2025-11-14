@@ -20,6 +20,7 @@ Automated installation script for PHP 8.4 with support for Ubuntu and Alpine Lin
   - Web server selection (Apache or Nginx)
   - Database server installation (MySQL Server, PostgreSQL Server, or None)
   - Redis server installation option
+  - Node.js installation (LTS, Current, or None)
   - Optional extensions (Imagick, Xdebug, Memcached, APCu, MongoDB, LDAP, IMAP, SSH2, Swoole, AMQP)
 - **Automatic Composer Installation**
 - **Complete Laravel/PHP Application Stack**
@@ -72,7 +73,17 @@ When running on Ubuntu, you'll be prompted to make the following selections:
 - **Yes** - Install Redis server locally
 - **No** - Skip server installation (you can connect to remote Redis using the installed extension)
 
-#### 4. Additional PHP Extensions (Optional)
+#### 4. Node.js Installation (Optional)
+- **Node.js LTS** - Long Term Support version (Recommended for production)
+- **Node.js Current** - Latest features and updates
+- **None** - Skip Node.js installation
+
+Node.js and npm are useful for:
+- Frontend asset compilation (Vite, Laravel Mix, Webpack)
+- Running build tools and task runners
+- Package management with npm/yarn
+
+#### 5. Additional PHP Extensions (Optional)
 You can select additional extensions based on your needs (multi-select):
 
 1. **Imagick** - Advanced image processing with ImageMagick
@@ -194,6 +205,10 @@ php -m
 
 # Check Composer
 composer --version
+
+# Check Node.js and npm (if installed)
+node --version
+npm --version
 
 # Check web server (Ubuntu)
 # For Apache:
@@ -347,6 +362,13 @@ php artisan key:generate
 
 # Run migrations (if database installed)
 php artisan migrate
+
+# Install frontend dependencies (if Node.js installed)
+npm install
+
+# Build frontend assets
+npm run build       # For production
+npm run dev         # For development
 ```
 
 **Note**: For detailed web server configuration, see the [Configuration](#configuration) section above which includes complete sample files for both Apache and Nginx.
