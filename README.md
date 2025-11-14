@@ -8,6 +8,10 @@ Automated installation script for PHP 8.4 with support for Ubuntu and Alpine Lin
 - **`php.ini.sample`** - Production-ready PHP configuration
 - **`apache-virtualhost.conf.sample`** - Apache virtual host template
 - **`nginx-virtualhost.conf.sample`** - Nginx server block template
+- **`supervisor-reverb.conf.sample`** - Supervisor config for Laravel Reverb WebSocket server
+- **`supervisor-horizon.conf.sample`** - Supervisor config for Laravel Horizon queue worker
+- **`supervisor-pulse.conf.sample`** - Supervisor config for Laravel Pulse monitoring
+- **`supervisor-schedule.conf.sample`** - Supervisor config for Laravel task scheduler
 - **`README.md`** - This documentation
 
 ## Features
@@ -24,15 +28,22 @@ Automated installation script for PHP 8.4 with support for Ubuntu and Alpine Lin
   - Optional extensions (Imagick, Xdebug, Memcached, APCu, MongoDB, LDAP, IMAP, SSH2, Swoole, AMQP)
 - **Automatic Composer Installation**
 - **Complete Laravel/PHP Application Stack**
-- **Sample Configuration Files**: Production-ready configs for PHP, Apache, and Nginx
+- **Sample Configuration Files**: Production-ready configs for PHP, Apache, Nginx, and Supervisor
 
 ## Configuration Files
 
 This repository includes sample configuration files to help you set up your server:
 
+### Web Server & PHP
 - **`php.ini.sample`** - Production-ready PHP 8.4 configuration with security best practices
 - **`apache-virtualhost.conf.sample`** - Apache virtual host configuration for Laravel/PHP apps
 - **`nginx-virtualhost.conf.sample`** - Nginx server block configuration for Laravel/PHP apps
+
+### Laravel Services (Supervisor)
+- **`supervisor-reverb.conf.sample`** - Supervisor config for Laravel Reverb (WebSocket server)
+- **`supervisor-horizon.conf.sample`** - Supervisor config for Laravel Horizon (queue management)
+- **`supervisor-pulse.conf.sample`** - Supervisor config for Laravel Pulse (application monitoring)
+- **`supervisor-schedule.conf.sample`** - Supervisor config for Laravel Scheduler (task scheduling)
 
 See the [Configuration](#configuration) section for detailed instructions on using these files.
 
@@ -344,6 +355,172 @@ sudo certbot --nginx -d example.com -d www.example.com
 # Test renewal:
 sudo certbot renew --dry-run
 ```
+
+### Supervisor Configuration for Laravel Services
+
+The repository includes Supervisor configuration files for managing Laravel's long-running processes. Supervisor ensures these services stay running and automatically restarts them if they crash.
+
+#### Available Configurations
+
+1. **Laravel Reverb** (`supervisor-reverb.conf.sample`) - WebSocket server
+2. **Laravel Horizon** (`supervisor-horizon.conf.sample`) - Queue worker management
+3. **Laravel Pulse** (`supervisor-pulse.conf.sample`) - Application monitoring
+4. **Laravel Scheduler** (`supervisor-schedule.conf.sample`) - Task scheduling
+
+#### Installing Supervisor
+
+```bash
+# Install Supervisor (Ubuntu)
+sudo apt update
+sudo apt install supervisor
+
+# Enable and start Supervisor
+sudo systemctl enable supervisor
+sudo systemctl start supervisor
+```
+
+#### Setting Up Laravel Services
+
+**General Setup Process:**
+
+```bash
+# 1. Copy the sample file(s) you need to /etc/supervisor/conf.d/
+sudo cp supervisor-horizon.conf.sample /etc/supervisor/conf.d/laravel-horizon.conf
+
+# 2. Edit the configuration file
+sudo nano /etc/supervisor/conf.d/laravel-horizon.conf
+
+# Update these values:
+# - command: Path to your Laravel installation
+# - user: Your web server user (www-data, nginx, etc.)
+# - stdout_logfile: Path to your log directory
+
+# 3. Reload Supervisor to recognize the new configuration
+sudo supervisorctl reread
+sudo supervisorctl update
+
+# 4. Start the service
+sudo supervisorctl start laravel-horizon:*
+
+# 5. Check status
+sudo supervisorctl status
+```
+
+#### Service-Specific Setup
+
+**Laravel Horizon (Queue Management):**
+
+```bash
+# Install Horizon
+composer require laravel/horizon
+php artisan horizon:install
+php artisan migrate
+
+# Configure Supervisor
+sudo cp supervisor-horizon.conf.sample /etc/supervisor/conf.d/laravel-horizon.conf
+sudo nano /etc/supervisor/conf.d/laravel-horizon.conf
+sudo supervisorctl reread && sudo supervisorctl update
+sudo supervisorctl start laravel-horizon:*
+
+# Access dashboard: https://your-domain.com/horizon
+```
+
+**Laravel Reverb (WebSocket Server):**
+
+```bash
+# Install Reverb
+composer require laravel/reverb
+php artisan reverb:install
+
+# Configure .env
+# REVERB_APP_ID, REVERB_APP_KEY, REVERB_APP_SECRET, etc.
+
+# Configure Supervisor
+sudo cp supervisor-reverb.conf.sample /etc/supervisor/conf.d/laravel-reverb.conf
+sudo nano /etc/supervisor/conf.d/laravel-reverb.conf
+sudo supervisorctl reread && sudo supervisorctl update
+sudo supervisorctl start laravel-reverb:*
+
+# Allow firewall access to WebSocket port
+sudo ufw allow 8080/tcp
+```
+
+**Laravel Pulse (Application Monitoring):**
+
+```bash
+# Install Pulse
+composer require laravel/pulse
+php artisan vendor:publish --provider="Laravel\Pulse\PulseServiceProvider"
+php artisan migrate
+
+# Configure Supervisor
+sudo cp supervisor-pulse.conf.sample /etc/supervisor/conf.d/laravel-pulse.conf
+sudo nano /etc/supervisor/conf.d/laravel-pulse.conf
+sudo supervisorctl reread && sudo supervisorctl update
+sudo supervisorctl start laravel-pulse:*
+
+# Access dashboard: https://your-domain.com/pulse
+```
+
+**Laravel Scheduler:**
+
+```bash
+# Option 1: Using Supervisor (this config)
+sudo cp supervisor-schedule.conf.sample /etc/supervisor/conf.d/laravel-schedule.conf
+sudo nano /etc/supervisor/conf.d/laravel-schedule.conf
+sudo supervisorctl reread && sudo supervisorctl update
+sudo supervisorctl start laravel-schedule:*
+
+# Option 2: Using Cron (traditional method - choose ONE)
+sudo crontab -e -u www-data
+# Add: * * * * * cd /var/www/html && php artisan schedule:run >> /dev/null 2>&1
+
+# Test scheduled tasks
+php artisan schedule:list
+```
+
+#### Managing Supervisor Services
+
+```bash
+# Check status of all services
+sudo supervisorctl status
+
+# Start a service
+sudo supervisorctl start laravel-horizon:*
+
+# Stop a service
+sudo supervisorctl stop laravel-horizon:*
+
+# Restart a service
+sudo supervisorctl restart laravel-horizon:*
+
+# View logs
+sudo supervisorctl tail -f laravel-horizon:laravel-horizon_00 stdout
+
+# Restart all services
+sudo supervisorctl restart all
+
+# Reload Supervisor configuration
+sudo supervisorctl reread
+sudo supervisorctl update
+```
+
+#### Important Notes
+
+1. **File Paths**: Always update the paths in the config files to match your Laravel installation
+2. **User Permissions**: Ensure the user specified in the config has proper permissions to run the commands
+3. **Log Directories**: Create log directories if they don't exist and ensure they're writable
+4. **After Deployment**: Restart services after deploying new code:
+   ```bash
+   # For Horizon (graceful)
+   php artisan horizon:terminate
+
+   # For others
+   sudo supervisorctl restart laravel-reverb:*
+   sudo supervisorctl restart laravel-pulse:*
+   sudo supervisorctl restart laravel-schedule:*
+   ```
+5. **Monitoring**: Regularly check logs and service status to ensure everything is running correctly
 
 ## Laravel Deployment Example
 

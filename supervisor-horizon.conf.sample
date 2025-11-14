@@ -1,0 +1,155 @@
+;------------------------------------------------------------
+; Laravel Horizon Supervisor Configuration
+;------------------------------------------------------------
+; Supervisor configuration for managing Laravel Horizon queue worker
+; Horizon provides a dashboard and configuration system for Laravel queues
+;
+; Installation:
+; 1. Copy this file to /etc/supervisor/conf.d/
+;    sudo cp supervisor-horizon.conf.sample /etc/supervisor/conf.d/laravel-horizon.conf
+;
+; 2. Update the configuration below with your application details
+;
+; 3. Reload Supervisor:
+;    sudo supervisorctl reread
+;    sudo supervisorctl update
+;    sudo supervisorctl start laravel-horizon:*
+;------------------------------------------------------------
+
+[program:laravel-horizon]
+; The command to run - update the path to your Laravel application
+command=php /var/www/html/artisan horizon
+
+; User to run the process as (typically the web server user)
+user=www-data
+
+; Number of processes to maintain (Horizon manages its own workers)
+numprocs=1
+
+; Process name format
+process_name=%(program_name)s_%(process_num)02d
+
+; Auto-start on supervisor start
+autostart=true
+
+; Auto-restart on unexpected termination
+autorestart=true
+
+; Redirect stderr to stdout
+redirect_stderr=true
+
+; Log file locations - create these directories if they don't exist
+stdout_logfile=/var/www/html/storage/logs/horizon.log
+stdout_logfile_maxbytes=10MB
+stdout_logfile_backups=10
+
+; How long to wait before considering the process started successfully
+startsecs=5
+
+; Stop wait timeout - Horizon needs time to finish processing jobs
+stopwaitsecs=3600
+
+; Stop signal - TERM allows Horizon to finish current jobs gracefully
+stopsignal=TERM
+
+; Process priority (lower number = higher priority)
+priority=100
+
+
+;------------------------------------------------------------
+; CONFIGURATION CHECKLIST
+;------------------------------------------------------------
+; Before enabling this configuration, ensure:
+;
+; 1. Laravel Horizon is installed:
+;    composer require laravel/horizon
+;    php artisan horizon:install
+;    php artisan migrate
+;
+; 2. Queue connection is configured in .env:
+;    QUEUE_CONNECTION=redis
+;
+; 3. Redis is installed and configured:
+;    REDIS_HOST=127.0.0.1
+;    REDIS_PASSWORD=null
+;    REDIS_PORT=6379
+;
+; 4. Horizon configuration is published:
+;    config/horizon.php exists and is configured
+;
+; 5. Update paths in this file:
+;    - command: Path to your Laravel installation
+;    - stdout_logfile: Path to your storage/logs directory
+;    - user: Web server user (www-data, nginx, apache, etc.)
+;
+; 6. Storage logs directory is writable:
+;    sudo chown -R www-data:www-data /var/www/html/storage/logs
+;
+; 7. Dashboard route is protected (config/horizon.php):
+;    Configure Horizon::auth() in App\Providers\HorizonServiceProvider
+;
+;------------------------------------------------------------
+; MONITORING & MANAGEMENT
+;------------------------------------------------------------
+; Check status:
+;   sudo supervisorctl status laravel-horizon:*
+;
+; Start process:
+;   sudo supervisorctl start laravel-horizon:*
+;
+; Stop process (graceful - waits for jobs to finish):
+;   sudo supervisorctl stop laravel-horizon:*
+;
+; Restart process (after code deployment):
+;   sudo supervisorctl restart laravel-horizon:*
+;   OR
+;   php artisan horizon:terminate (graceful)
+;
+; View logs:
+;   sudo supervisorctl tail -f laravel-horizon:laravel-horizon_00 stdout
+;
+; Access dashboard:
+;   https://your-domain.com/horizon
+;
+;------------------------------------------------------------
+; DEPLOYMENT WORKFLOW
+;------------------------------------------------------------
+; After deploying new code, restart Horizon to pick up changes:
+;
+; Option 1 - Graceful restart (recommended):
+;   php artisan horizon:terminate
+;   (Supervisor will automatically restart it)
+;
+; Option 2 - Force restart:
+;   sudo supervisorctl restart laravel-horizon:*
+;
+; Option 3 - Pause/Continue:
+;   php artisan horizon:pause
+;   php artisan horizon:continue
+;
+;------------------------------------------------------------
+; PRODUCTION CONSIDERATIONS
+;------------------------------------------------------------
+; 1. Configure appropriate worker pools in config/horizon.php
+; 2. Set memory limits for workers (--memory=128)
+; 3. Monitor failed jobs via Horizon dashboard
+; 4. Set up log rotation for stdout_logfile
+; 5. Configure balance strategy (simple, auto, false)
+; 6. Use supervisord for process management
+; 7. Set appropriate timeout values for long-running jobs
+; 8. Monitor Redis memory usage
+; 9. Configure Horizon authentication for dashboard access
+; 10. Consider using Redis Sentinel for HA Redis setup
+;
+; Worker Pool Example (config/horizon.php):
+; 'production' => [
+;     'supervisor-1' => [
+;         'connection' => 'redis',
+;         'queue' => ['default', 'emails'],
+;         'balance' => 'auto',
+;         'processes' => 10,
+;         'tries' => 3,
+;         'timeout' => 60,
+;     ],
+; ],
+;------------------------------------------------------------
