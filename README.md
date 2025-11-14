@@ -24,11 +24,17 @@ sudo ./app-setup.sh
 
 That's it! Your Laravel application is now configured with proper permissions and services.
 
+> 📘 **For detailed architecture and workflow documentation, see [FLOW.md](FLOW.md)**
+
 ## Repository Contents
 
 ### Main Setup Scripts (Recommended)
 - **`server-setup.sh`** - **⭐ ONE-TIME** server preparation (PHP, web server, Supervisor)
 - **`app-setup.sh`** - **Per-application** deployment (user, permissions, services)
+
+### Documentation
+- **`README.md`** - Complete setup guide and usage instructions
+- **`FLOW.md`** - Architecture flow and technical documentation
 
 ### PHP & Web Server Setup
 - **`setup-php84.sh`** - PHP 8.4 installation script (called by server-setup.sh)
