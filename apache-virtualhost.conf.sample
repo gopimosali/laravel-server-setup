@@ -1,0 +1,224 @@
+##################################################
+# Apache Virtual Host Configuration for PHP 8.4 #
+# Laravel/PHP Application Example               #
+##################################################
+#
+# Installation Instructions:
+# 1. Copy this file to /etc/apache2/sites-available/
+#    sudo cp apache-virtualhost.conf.sample /etc/apache2/sites-available/your-app.conf
+#
+# 2. Edit the configuration with your settings
+#    sudo nano /etc/apache2/sites-available/your-app.conf
+#
+# 3. Enable the site
+#    sudo a2ensite your-app.conf
+#
+# 4. Test configuration
+#    sudo apache2ctl configtest
+#
+# 5. Reload Apache
+#    sudo systemctl reload apache2
+#
+
+##################################################
+# HTTP Virtual Host (Port 80)                   #
+##################################################
+
+<VirtualHost *:80>
+    # Server name and aliases
+    ServerName example.com
+    ServerAlias www.example.com
+
+    # Admin email
+    ServerAdmin admin@example.com
+
+    # Document root - point to public directory for Laravel
+    # For standard PHP apps, use the root directory
+    DocumentRoot /var/www/html/your-app/public
+
+    # Directory configuration
+    <Directory /var/www/html/your-app/public>
+        # Allow .htaccess overrides
+        AllowOverride All
+
+        # Access control
+        Require all granted
+
+        # Directory index files
+        DirectoryIndex index.php index.html
+
+        # Enable URL rewriting (Laravel, etc.)
+        Options -Indexes +FollowSymLinks
+
+        # Prevent access to hidden files
+        <FilesMatch "^\.">
+            Require all denied
+        </FilesMatch>
+    </Directory>
+
+    # Deny access to sensitive files
+    <FilesMatch "^\.env">
+        Require all denied
+    </FilesMatch>
+
+    # Deny access to composer files
+    <FilesMatch "composer\.(json|lock)$">
+        Require all denied
+    </FilesMatch>
+
+    # Deny access to package.json and similar
+    <FilesMatch "package(-lock)?\.json$">
+        Require all denied
+    </FilesMatch>
+
+    # Logging
+    ErrorLog ${APACHE_LOG_DIR}/your-app-error.log
+    CustomLog ${APACHE_LOG_DIR}/your-app-access.log combined
+
+    # Log level (debug, info, notice, warn, error, crit, alert, emerg)
+    LogLevel warn
+
+    # PHP settings (optional - can also set in php.ini)
+    # php_value memory_limit 256M
+    # php_value upload_max_filesize 10M
+    # php_value post_max_size 12M
+    # php_value max_execution_time 60
+</VirtualHost>
+
+##################################################
+# HTTPS Virtual Host (Port 443) - SSL/TLS      #
+##################################################
+#
+# Uncomment this section after obtaining SSL certificate
+# Recommended: Use Let's Encrypt with certbot
+#
+# To enable SSL:
+# 1. Install certbot: sudo apt install certbot python3-certbot-apache
+# 2. Get certificate: sudo certbot --apache -d example.com -d www.example.com
+# 3. Certbot will auto-configure SSL for you
+#
+# Or manually configure:
+
+# <IfModule mod_ssl.c>
+# <VirtualHost *:443>
+#     ServerName example.com
+#     ServerAlias www.example.com
+#     ServerAdmin admin@example.com
+#
+#     DocumentRoot /var/www/html/your-app/public
+#
+#     <Directory /var/www/html/your-app/public>
+#         AllowOverride All
+#         Require all granted
+#         DirectoryIndex index.php index.html
+#         Options -Indexes +FollowSymLinks
+#
+#         <FilesMatch "^\.">
+#             Require all denied
+#         </FilesMatch>
+#     </Directory>
+#
+#     # Deny access to sensitive files
+#     <FilesMatch "^\.env">
+#         Require all denied
+#     </FilesMatch>
+#
+#     <FilesMatch "composer\.(json|lock)$">
+#         Require all denied
+#     </FilesMatch>
+#
+#     # SSL Configuration
+#     SSLEngine on
+#     SSLCertificateFile /etc/ssl/certs/your-cert.crt
+#     SSLCertificateKeyFile /etc/ssl/private/your-key.key
+#     SSLCertificateChainFile /etc/ssl/certs/your-chain.crt
+#
+#     # Modern SSL/TLS configuration
+#     SSLProtocol all -SSLv3 -TLSv1 -TLSv1.1
+#     SSLCipherSuite ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384
+#     SSLHonorCipherOrder off
+#
+#     # HSTS (optional but recommended)
+#     Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+#
+#     # Security headers
+#     Header always set X-Frame-Options "SAMEORIGIN"
+#     Header always set X-Content-Type-Options "nosniff"
+#     Header always set X-XSS-Protection "1; mode=block"
+#     Header always set Referrer-Policy "strict-origin-when-cross-origin"
+#
+#     # Logging
+#     ErrorLog ${APACHE_LOG_DIR}/your-app-ssl-error.log
+#     CustomLog ${APACHE_LOG_DIR}/your-app-ssl-access.log combined
+#     LogLevel warn
+# </VirtualHost>
+# </IfModule>
+
+##################################################
+# Multiple Apps Configuration                   #
+##################################################
+#
+# To host multiple applications, create separate .conf files
+# for each app or use name-based virtual hosting:
+#
+# <VirtualHost *:80>
+#     ServerName app1.example.com
+#     DocumentRoot /var/www/html/app1/public
+#     ...
+# </VirtualHost>
+#
+# <VirtualHost *:80>
+#     ServerName app2.example.com
+#     DocumentRoot /var/www/html/app2/public
+#     ...
+# </VirtualHost>
+
+##################################################
+# Required Apache Modules                       #
+##################################################
+#
+# Enable required modules:
+# sudo a2enmod rewrite
+# sudo a2enmod php8.4
+# sudo a2enmod ssl (for HTTPS)
+# sudo a2enmod headers (for security headers)
+#
+# Then restart Apache:
+# sudo systemctl restart apache2
+
+##################################################
+# Laravel Specific Configuration                #
+##################################################
+#
+# For Laravel applications, ensure:
+# 1. DocumentRoot points to the /public directory
+# 2. mod_rewrite is enabled
+# 3. AllowOverride All is set
+# 4. Proper file permissions:
+#    sudo chown -R www-data:www-data /var/www/html/your-app
+#    sudo chmod -R 755 /var/www/html/your-app
+#    sudo chmod -R 775 /var/www/html/your-app/storage
+#    sudo chmod -R 775 /var/www/html/your-app/bootstrap/cache
+
+##################################################
+# Performance Tips                              #
+##################################################
+#
+# 1. Enable compression (mod_deflate):
+#    <IfModule mod_deflate.c>
+#        AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript
+#    </IfModule>
+#
+# 2. Enable caching (mod_expires):
+#    <IfModule mod_expires.c>
+#        ExpiresActive On
+#        ExpiresByType image/jpg "access plus 1 year"
+#        ExpiresByType image/jpeg "access plus 1 year"
+#        ExpiresByType image/gif "access plus 1 year"
+#        ExpiresByType image/png "access plus 1 year"
+#        ExpiresByType text/css "access plus 1 month"
+#        ExpiresByType application/javascript "access plus 1 month"
+#    </IfModule>
+#
+# 3. Enable HTTP/2 (mod_http2):
+#    Protocols h2 http/1.1

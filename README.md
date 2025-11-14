@@ -2,6 +2,14 @@
 
 Automated installation script for PHP 8.4 with support for Ubuntu and Alpine Linux.
 
+## Repository Contents
+
+- **`setup-php84.sh`** - Main installation script
+- **`php.ini.sample`** - Production-ready PHP configuration
+- **`apache-virtualhost.conf.sample`** - Apache virtual host template
+- **`nginx-virtualhost.conf.sample`** - Nginx server block template
+- **`README.md`** - This documentation
+
 ## Features
 
 - **OS Support**: Ubuntu and Alpine Linux
@@ -15,6 +23,17 @@ Automated installation script for PHP 8.4 with support for Ubuntu and Alpine Lin
   - Optional extensions (Imagick, Xdebug, Memcached, APCu, MongoDB, LDAP, IMAP, SSH2, Swoole, AMQP)
 - **Automatic Composer Installation**
 - **Complete Laravel/PHP Application Stack**
+- **Sample Configuration Files**: Production-ready configs for PHP, Apache, and Nginx
+
+## Configuration Files
+
+This repository includes sample configuration files to help you set up your server:
+
+- **`php.ini.sample`** - Production-ready PHP 8.4 configuration with security best practices
+- **`apache-virtualhost.conf.sample`** - Apache virtual host configuration for Laravel/PHP apps
+- **`nginx-virtualhost.conf.sample`** - Nginx server block configuration for Laravel/PHP apps
+
+See the [Configuration](#configuration) section for detailed instructions on using these files.
 
 ## Requirements
 
@@ -185,6 +204,132 @@ sudo systemctl status nginx
 sudo systemctl status php8.4-fpm
 ```
 
+## Configuration
+
+### PHP Configuration
+
+The `php.ini.sample` file contains production-ready PHP 8.4 settings with security best practices.
+
+**To use the PHP configuration:**
+
+```bash
+# Backup original php.ini
+sudo cp /etc/php/8.4/fpm/php.ini /etc/php/8.4/fpm/php.ini.backup
+
+# Copy sample configuration
+sudo cp php.ini.sample /etc/php/8.4/fpm/php.ini
+
+# Edit settings as needed
+sudo nano /etc/php/8.4/fpm/php.ini
+
+# Restart PHP-FPM
+sudo systemctl restart php8.4-fpm
+```
+
+**Key settings in php.ini.sample:**
+- **Security**: `expose_php = Off`, `disable_functions` for dangerous functions
+- **Performance**: OPcache enabled with optimized settings
+- **Error Handling**: Production-safe error reporting
+- **Memory**: 128M default (adjust for your needs)
+- **Upload Limits**: 10M files, 12M POST data
+- **Sessions**: Secure cookie settings
+
+### Apache Virtual Host Configuration
+
+The `apache-virtualhost.conf.sample` file provides a complete Apache configuration for Laravel/PHP applications.
+
+**To use the Apache configuration:**
+
+```bash
+# Copy sample to sites-available
+sudo cp apache-virtualhost.conf.sample /etc/apache2/sites-available/your-app.conf
+
+# Edit configuration
+sudo nano /etc/apache2/sites-available/your-app.conf
+
+# Update these values:
+# - ServerName (your domain)
+# - ServerAlias (www subdomain)
+# - ServerAdmin (your email)
+# - DocumentRoot (path to your app)
+
+# Enable the site
+sudo a2ensite your-app.conf
+
+# Test configuration
+sudo apache2ctl configtest
+
+# Reload Apache
+sudo systemctl reload apache2
+```
+
+**Features included:**
+- Laravel-ready configuration with URL rewriting
+- Security headers and file access restrictions
+- SSL/TLS configuration (commented, ready to enable)
+- Logging configuration
+- Performance optimization tips
+
+### Nginx Server Block Configuration
+
+The `nginx-virtualhost.conf.sample` file provides a complete Nginx configuration for Laravel/PHP applications.
+
+**To use the Nginx configuration:**
+
+```bash
+# Copy sample to sites-available
+sudo cp nginx-virtualhost.conf.sample /etc/nginx/sites-available/your-app
+
+# Edit configuration
+sudo nano /etc/nginx/sites-available/your-app
+
+# Update these values:
+# - server_name (your domain)
+# - root (path to your app)
+# - Log file paths
+
+# Create symbolic link
+sudo ln -s /etc/nginx/sites-available/your-app /etc/nginx/sites-enabled/
+
+# Test configuration
+sudo nginx -t
+
+# Reload Nginx
+sudo systemctl reload nginx
+```
+
+**Features included:**
+- PHP-FPM integration with optimized settings
+- Security headers (X-Frame-Options, HSTS, etc.)
+- Static file caching and Gzip compression
+- SSL/TLS configuration (commented, ready to enable)
+- Laravel-specific routing and file protection
+- Performance optimization settings
+
+### SSL/TLS Certificate (Let's Encrypt)
+
+Both Apache and Nginx configurations include commented SSL sections. To enable HTTPS:
+
+```bash
+# Install Certbot
+# For Apache:
+sudo apt install certbot python3-certbot-apache
+
+# For Nginx:
+sudo apt install certbot python3-certbot-nginx
+
+# Get certificate and auto-configure
+# For Apache:
+sudo certbot --apache -d example.com -d www.example.com
+
+# For Nginx:
+sudo certbot --nginx -d example.com -d www.example.com
+
+# Auto-renewal is enabled by default
+# Test renewal:
+sudo certbot renew --dry-run
+```
+
 ## Laravel Deployment Example
 
 ```bash
@@ -204,43 +349,7 @@ php artisan key:generate
 php artisan migrate
 ```
 
-## Nginx Configuration Example
-
-For Laravel/PHP applications on Nginx, create a site configuration:
-
-```nginx
-server {
-    listen 80;
-    server_name example.com;
-    root /var/www/html/my-app/public;
-
-    add_header X-Frame-Options "SAMEORIGIN";
-    add_header X-Content-Type-Options "nosniff";
-
-    index index.php;
-
-    charset utf-8;
-
-    location / {
-        try_files $uri $uri/ /index.php?$query_string;
-    }
-
-    location = /favicon.ico { access_log off; log_not_found off; }
-    location = /robots.txt  { access_log off; log_not_found off; }
-
-    error_page 404 /index.php;
-
-    location ~ \.php$ {
-        fastcgi_pass unix:/var/run/php/php8.4-fpm.sock;
-        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
-        include fastcgi_params;
-    }
-
-    location ~ /\.(?!well-known).* {
-        deny all;
-    }
-}
-```
+**Note**: For detailed web server configuration, see the [Configuration](#configuration) section above which includes complete sample files for both Apache and Nginx.
 
 ## Managing Optional Extensions
 

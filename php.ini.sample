@@ -1,0 +1,293 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; PHP 8.4 Configuration - Production/Development Sample     ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; This is a sample php.ini file with recommended settings for PHP 8.4
+; Copy this file and adjust settings based on your environment
+;
+; For Ubuntu/Debian, PHP config files are located at:
+; - CLI: /etc/php/8.4/cli/php.ini
+; - FPM: /etc/php/8.4/fpm/php.ini
+; - Apache: /etc/php/8.4/apache2/php.ini
+;
+; After making changes, restart your web server:
+; - FPM: sudo systemctl restart php8.4-fpm
+; - Apache: sudo systemctl restart apache2
+
+;;;;;;;;;;;;;;;;;;;;
+; Resource Limits  ;
+;;;;;;;;;;;;;;;;;;;;
+
+; Maximum execution time of each script, in seconds
+; Development: 300, Production: 30
+max_execution_time = 30
+
+; Maximum amount of time each script may spend parsing request data
+; Development: 120, Production: 60
+max_input_time = 60
+
+; Maximum input variable nesting level
+max_input_nesting_level = 64
+
+; Maximum amount of memory a script may consume
+; Development: 256M, Production: 128M (adjust based on your application)
+memory_limit = 128M
+
+;;;;;;;;;;;;;;;;;;;;
+; Error Handling   ;
+;;;;;;;;;;;;;;;;;;;;
+
+; Error reporting level
+; Development: E_ALL
+; Production: E_ALL & ~E_DEPRECATED & ~E_STRICT
+error_reporting = E_ALL & ~E_DEPRECATED & ~E_STRICT
+
+; Display errors to output
+; Development: On, Production: Off
+display_errors = Off
+
+; Display startup errors
+; Development: On, Production: Off
+display_startup_errors = Off
+
+; Log errors to specified file
+log_errors = On
+
+; Maximum length of log_errors in bytes
+log_errors_max_len = 1024
+
+; Error log file location
+; Ubuntu default: /var/log/php8.4-fpm.log or syslog
+error_log = /var/log/php_errors.log
+
+;;;;;;;;;;;;;;;;;;;;
+; File Uploads     ;
+;;;;;;;;;;;;;;;;;;;;
+
+; Allow HTTP file uploads
+file_uploads = On
+
+; Temporary directory for HTTP uploaded files
+upload_tmp_dir = /tmp
+
+; Maximum allowed size for uploaded files
+; Adjust based on your application needs
+upload_max_filesize = 10M
+
+; Maximum number of files that can be uploaded via a single request
+max_file_uploads = 20
+
+;;;;;;;;;;;;;;;;;;;;
+; POST Data        ;
+;;;;;;;;;;;;;;;;;;;;
+
+; Maximum size of POST data that PHP will accept
+; Must be larger than upload_max_filesize
+post_max_size = 12M
+
+;;;;;;;;;;;;;;;;;;;;
+; Security         ;
+;;;;;;;;;;;;;;;;;;;;
+
+; Disable dangerous functions
+; Add more based on your security requirements
+disable_functions = exec,passthru,shell_exec,system,proc_open,popen,curl_exec,curl_multi_exec,parse_ini_file,show_source
+
+; Disable classes
+disable_classes =
+
+; Expose PHP version in HTTP headers
+; Production: Off
+expose_php = Off
+
+; Allow accessing files only under specified directory
+; Uncomment and set for additional security
+; open_basedir = /var/www/html:/tmp
+
+; SQL safe mode (deprecated, use prepared statements instead)
+sql.safe_mode = Off
+
+;;;;;;;;;;;;;;;;;;;;
+; Sessions         ;
+;;;;;;;;;;;;;;;;;;;;
+
+; Handler used to store/retrieve data
+session.save_handler = files
+
+; Directory where session files are stored
+session.save_path = "/var/lib/php/sessions"
+
+; Use cookies to store session ID
+session.use_cookies = 1
+
+; Use only cookies (not URL parameters)
+session.use_only_cookies = 1
+
+; Name of the session cookie
+session.name = PHPSESSID
+
+; Initialize session on request startup
+session.auto_start = 0
+
+; Lifetime of cookie in seconds (0 = until browser closes)
+session.cookie_lifetime = 0
+
+; Path on domain where cookie works
+session.cookie_path = /
+
+; Domain for cookie
+session.cookie_domain =
+
+; Send cookie only over secure connections
+; Production with HTTPS: On
+session.cookie_secure = Off
+
+; Cookie accessible only through HTTP protocol
+session.cookie_httponly = 1
+
+; Cookie SameSite attribute (Lax, Strict, None)
+session.cookie_samesite = Lax
+
+; Garbage collection probability
+session.gc_probability = 1
+session.gc_divisor = 1000
+
+; Session lifetime in seconds (24 minutes)
+session.gc_maxlifetime = 1440
+
+;;;;;;;;;;;;;;;;;;;;
+; Output Control   ;
+;;;;;;;;;;;;;;;;;;;;
+
+; Output buffering
+output_buffering = 4096
+
+; Compression
+zlib.output_compression = Off
+
+;;;;;;;;;;;;;;;;;;;;
+; Date/Time        ;
+;;;;;;;;;;;;;;;;;;;;
+
+; Defines the default timezone
+; Set to your server's timezone
+date.timezone = UTC
+
+;;;;;;;;;;;;;;;;;;;;
+; OPcache Settings ;
+;;;;;;;;;;;;;;;;;;;;
+
+; Enable OPcache
+opcache.enable = 1
+opcache.enable_cli = 0
+
+; Memory consumption
+opcache.memory_consumption = 128
+
+; Interned strings buffer
+opcache.interned_strings_buffer = 8
+
+; Maximum number of cached files
+opcache.max_accelerated_files = 10000
+
+; Validate timestamps
+; Development: 1, Production: 0 (disable for better performance)
+opcache.validate_timestamps = 0
+
+; How often to check file timestamps (in seconds)
+; Only used if validate_timestamps is enabled
+opcache.revalidate_freq = 2
+
+; Save comments in opcode cache
+; Required for Laravel and some frameworks
+opcache.save_comments = 1
+
+; Fast shutdown
+opcache.fast_shutdown = 1
+
+;;;;;;;;;;;;;;;;;;;;
+; Realpath Cache   ;
+;;;;;;;;;;;;;;;;;;;;
+
+; Realpath cache size
+realpath_cache_size = 4096k
+
+; Realpath cache TTL
+realpath_cache_ttl = 120
+
+;;;;;;;;;;;;;;;;;;;;
+; MySQL/MySQLi     ;
+;;;;;;;;;;;;;;;;;;;;
+
+; Allow persistent connections
+mysqli.allow_persistent = On
+
+; Maximum number of persistent connections (-1 = unlimited)
+mysqli.max_persistent = -1
+
+; Maximum number of links (-1 = unlimited)
+mysqli.max_links = -1
+
+; Default port
+mysqli.default_port = 3306
+
+; Default socket
+mysqli.default_socket =
+
+; Reconnect if connection lost
+mysqli.reconnect = Off
+
+;;;;;;;;;;;;;;;;;;;;
+; PostgreSQL       ;
+;;;;;;;;;;;;;;;;;;;;
+
+; Allow persistent connections
+pgsql.allow_persistent = On
+
+; Maximum number of persistent connections (-1 = unlimited)
+pgsql.max_persistent = -1
+
+; Maximum number of links (-1 = unlimited)
+pgsql.max_links = -1
+
+;;;;;;;;;;;;;;;;;;;;
+; APCu (if enabled);
+;;;;;;;;;;;;;;;;;;;;
+
+; APCu cache size
+apc.shm_size = 32M
+
+; Enable APCu
+apc.enabled = 1
+
+; TTL for cache entries
+apc.ttl = 7200
+
+;;;;;;;;;;;;;;;;;;;;
+; Development Only ;
+;;;;;;;;;;;;;;;;;;;;
+;
+; For development environments, change these settings:
+;
+; error_reporting = E_ALL
+; display_errors = On
+; display_startup_errors = On
+; opcache.validate_timestamps = 1
+; memory_limit = 256M
+; max_execution_time = 300
+; session.cookie_secure = Off
+;
+; Don't forget to disable Xdebug in production!
+
+;;;;;;;;;;;;;;;;;;;;
+; Production Only  ;
+;;;;;;;;;;;;;;;;;;;;
+;
+; For production environments, ensure:
+;
+; display_errors = Off
+; expose_php = Off
+; opcache.validate_timestamps = 0
+; session.cookie_secure = On (if using HTTPS)
+; error_log = /var/log/php_errors.log
+; Disable Xdebug extension completely
