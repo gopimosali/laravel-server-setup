@@ -8,15 +8,14 @@ Automated installation script for PHP 8.4 with support for Ubuntu and Alpine Lin
 
 ```bash
 # 1. Prepare server (one-time setup)
-chmod +x laravel-server-setup.sh
-sudo ./laravel-server-setup.sh
+chmod +x server-setup.sh
+sudo ./server-setup.sh
 # Installs PHP 8.4 and web server (if needed)
-# Installs Git for repository deployments
 # Installs Supervisor
 
 # 2. Deploy your Laravel application (run for each app)
-chmod +x laravel-app-setup.sh
-sudo ./laravel-app-setup.sh
+chmod +x app-setup.sh
+sudo ./app-setup.sh
 # Choose user configuration (development/production)
 # SSH key generation for Git access
 # Choose deployment: Local directory OR Git repository
@@ -28,16 +27,16 @@ That's it! Your Laravel application is now configured with proper permissions an
 ## Repository Contents
 
 ### Main Setup Scripts (Recommended)
-- **`laravel-server-setup.sh`** - **⭐ ONE-TIME** server preparation (PHP, web server, Supervisor)
-- **`laravel-app-setup.sh`** - **Per-application** deployment (user, permissions, services)
+- **`server-setup.sh`** - **⭐ ONE-TIME** server preparation (PHP, web server, Supervisor)
+- **`app-setup.sh`** - **Per-application** deployment (user, permissions, services)
 
 ### PHP & Web Server Setup
-- **`setup-php84.sh`** - PHP 8.4 installation script (called by laravel-server-setup.sh)
+- **`setup-php84.sh`** - PHP 8.4 installation script (called by server-setup.sh)
+
+### Configuration Templates (`config/`)
 - **`php.ini.sample`** - Production-ready PHP configuration
 - **`apache-virtualhost.conf.sample`** - Apache virtual host template
 - **`nginx-virtualhost.conf.sample`** - Nginx server block template
-
-### Supervisor Configuration Templates
 - **`supervisor-reverb.conf.sample`** - Supervisor config for Laravel Reverb WebSocket server
 - **`supervisor-horizon.conf.sample`** - Supervisor config for Laravel Horizon queue worker
 - **`supervisor-pulse.conf.sample`** - Supervisor config for Laravel Pulse monitoring
@@ -65,15 +64,15 @@ That's it! Your Laravel application is now configured with proper permissions an
 This repository includes sample configuration files to help you set up your server:
 
 ### Web Server & PHP
-- **`php.ini.sample`** - Production-ready PHP 8.4 configuration with security best practices
-- **`apache-virtualhost.conf.sample`** - Apache virtual host configuration for Laravel/PHP apps
-- **`nginx-virtualhost.conf.sample`** - Nginx server block configuration for Laravel/PHP apps
+- **`config/php.ini.sample`** - Production-ready PHP 8.4 configuration with security best practices
+- **`config/apache-virtualhost.conf.sample`** - Apache virtual host configuration for Laravel/PHP apps
+- **`config/nginx-virtualhost.conf.sample`** - Nginx server block configuration for Laravel/PHP apps
 
 ### Laravel Services (Supervisor)
-- **`supervisor-reverb.conf.sample`** - Supervisor config for Laravel Reverb (WebSocket server)
-- **`supervisor-horizon.conf.sample`** - Supervisor config for Laravel Horizon (queue management)
-- **`supervisor-pulse.conf.sample`** - Supervisor config for Laravel Pulse (application monitoring)
-- **`supervisor-schedule.conf.sample`** - Supervisor config for Laravel Scheduler (task scheduling)
+- **`config/supervisor-reverb.conf.sample`** - Supervisor config for Laravel Reverb (WebSocket server)
+- **`config/supervisor-horizon.conf.sample`** - Supervisor config for Laravel Horizon (queue management)
+- **`config/supervisor-pulse.conf.sample`** - Supervisor config for Laravel Pulse (application monitoring)
+- **`config/supervisor-schedule.conf.sample`** - Supervisor config for Laravel Scheduler (task scheduling)
 
 See the [Configuration](#configuration) section for detailed instructions on using these files.
 
@@ -82,6 +81,7 @@ See the [Configuration](#configuration) section for detailed instructions on usi
 - Root/sudo access
 - Supported OS: Ubuntu 20.04+, Debian 11+, or Alpine Linux
 - Internet connection
+- Git (for cloning this repository and Git-based deployments)
 
 ## Usage
 
@@ -273,7 +273,7 @@ The `php.ini.sample` file contains production-ready PHP 8.4 settings with securi
 sudo cp /etc/php/8.4/fpm/php.ini /etc/php/8.4/fpm/php.ini.backup
 
 # Copy sample configuration
-sudo cp php.ini.sample /etc/php/8.4/fpm/php.ini
+sudo cp config/php.ini.sample /etc/php/8.4/fpm/php.ini
 
 # Edit settings as needed
 sudo nano /etc/php/8.4/fpm/php.ini
@@ -298,7 +298,7 @@ The `apache-virtualhost.conf.sample` file provides a complete Apache configurati
 
 ```bash
 # Copy sample to sites-available
-sudo cp apache-virtualhost.conf.sample /etc/apache2/sites-available/your-app.conf
+sudo cp config/apache-virtualhost.conf.sample /etc/apache2/sites-available/your-app.conf
 
 # Edit configuration
 sudo nano /etc/apache2/sites-available/your-app.conf
@@ -334,7 +334,7 @@ The `nginx-virtualhost.conf.sample` file provides a complete Nginx configuration
 
 ```bash
 # Copy sample to sites-available
-sudo cp nginx-virtualhost.conf.sample /etc/nginx/sites-available/your-app
+sudo cp config/nginx-virtualhost.conf.sample /etc/nginx/sites-available/your-app
 
 # Edit configuration
 sudo nano /etc/nginx/sites-available/your-app
@@ -402,8 +402,8 @@ The repository includes Supervisor configuration files for managing Laravel's lo
 **Step 1: Server Preparation (One-Time)**
 
 ```bash
-chmod +x laravel-server-setup.sh
-sudo ./laravel-server-setup.sh
+chmod +x server-setup.sh
+sudo ./server-setup.sh
 ```
 
 This script will:
@@ -412,11 +412,13 @@ This script will:
 - Install Supervisor if needed
 - Save server configuration
 
+Note: Git is assumed to be already installed (required to clone this repository)
+
 **Step 2: Application Deployment (Per Laravel App)**
 
 ```bash
-chmod +x laravel-app-setup.sh
-sudo ./laravel-app-setup.sh
+chmod +x app-setup.sh
+sudo ./app-setup.sh
 ```
 
 This script will:
@@ -454,7 +456,7 @@ Edit each supervisor config file and update the `user=` line to match your web s
 
 ```bash
 # 1. Copy the sample file(s) you need to /etc/supervisor/conf.d/
-sudo cp supervisor-horizon.conf.sample /etc/supervisor/conf.d/laravel-horizon.conf
+sudo cp config/supervisor-horizon.conf.sample /etc/supervisor/conf.d/laravel-horizon.conf
 
 # 2. Edit the configuration file
 sudo nano /etc/supervisor/conf.d/laravel-horizon.conf
@@ -486,7 +488,7 @@ php artisan horizon:install
 php artisan migrate
 
 # Configure Supervisor
-sudo cp supervisor-horizon.conf.sample /etc/supervisor/conf.d/laravel-horizon.conf
+sudo cp config/supervisor-horizon.conf.sample /etc/supervisor/conf.d/laravel-horizon.conf
 sudo nano /etc/supervisor/conf.d/laravel-horizon.conf
 sudo supervisorctl reread && sudo supervisorctl update
 sudo supervisorctl start laravel-horizon:*
@@ -505,7 +507,7 @@ php artisan reverb:install
 # REVERB_APP_ID, REVERB_APP_KEY, REVERB_APP_SECRET, etc.
 
 # Configure Supervisor
-sudo cp supervisor-reverb.conf.sample /etc/supervisor/conf.d/laravel-reverb.conf
+sudo cp config/supervisor-reverb.conf.sample /etc/supervisor/conf.d/laravel-reverb.conf
 sudo nano /etc/supervisor/conf.d/laravel-reverb.conf
 sudo supervisorctl reread && sudo supervisorctl update
 sudo supervisorctl start laravel-reverb:*
@@ -523,7 +525,7 @@ php artisan vendor:publish --provider="Laravel\Pulse\PulseServiceProvider"
 php artisan migrate
 
 # Configure Supervisor
-sudo cp supervisor-pulse.conf.sample /etc/supervisor/conf.d/laravel-pulse.conf
+sudo cp config/supervisor-pulse.conf.sample /etc/supervisor/conf.d/laravel-pulse.conf
 sudo nano /etc/supervisor/conf.d/laravel-pulse.conf
 sudo supervisorctl reread && sudo supervisorctl update
 sudo supervisorctl start laravel-pulse:*
@@ -535,7 +537,7 @@ sudo supervisorctl start laravel-pulse:*
 
 ```bash
 # Option 1: Using Supervisor (this config)
-sudo cp supervisor-schedule.conf.sample /etc/supervisor/conf.d/laravel-schedule.conf
+sudo cp config/supervisor-schedule.conf.sample /etc/supervisor/conf.d/laravel-schedule.conf
 sudo nano /etc/supervisor/conf.d/laravel-schedule.conf
 sudo supervisorctl reread && sudo supervisorctl update
 sudo supervisorctl start laravel-schedule:*
@@ -657,11 +659,11 @@ Deploy directly from GitHub, GitLab, or Bitbucket with automatic SSH key setup:
 ```bash
 # 1. ONE-TIME: Prepare server (if not done already)
 cd /path/to/laravel-server-setup
-sudo ./laravel-server-setup.sh
-# This installs PHP, web server, Git, and Supervisor
+sudo ./server-setup.sh
+# This installs PHP, web server, and Supervisor
 
 # 2. Deploy from Git repository
-sudo ./laravel-app-setup.sh
+sudo ./app-setup.sh
 
 # Follow the prompts:
 # Step 1/6: Choose user (Production - Create new dedicated user)
@@ -734,7 +736,7 @@ Deploy from an existing directory on the server:
 ```bash
 # 1. ONE-TIME: Prepare server (if not done already)
 cd /path/to/laravel-server-setup
-sudo ./laravel-server-setup.sh
+sudo ./server-setup.sh
 
 # 2. Install Laravel locally
 cd /var/www
@@ -753,7 +755,7 @@ npm run build  # For production
 
 # 5. Deploy with app setup script
 cd /path/to/laravel-server-setup
-sudo ./laravel-app-setup.sh
+sudo ./app-setup.sh
 
 # Follow the prompts:
 # Step 1/6: Choose user (Development or Production)
@@ -768,7 +770,7 @@ sudo supervisorctl status
 ```
 
 **For additional Laravel apps on the same server:**
-Just run `sudo ./laravel-app-setup.sh` again - it will let you choose user configuration and deployment method for each app!
+Just run `sudo ./app-setup.sh` again - it will let you choose user configuration and deployment method for each app!
 
 ### SSH Key Management for Git
 
@@ -828,7 +830,7 @@ sudo chmod -R 775 /var/www/my-app/storage
 sudo chmod -R 775 /var/www/my-app/bootstrap/cache
 
 # 4. Copy and configure supervisor files
-sudo cp supervisor-horizon.conf.sample /etc/supervisor/conf.d/laravel-horizon.conf
+sudo cp config/supervisor-horizon.conf.sample /etc/supervisor/conf.d/laravel-horizon.conf
 sudo nano /etc/supervisor/conf.d/laravel-horizon.conf
 # Update user= and paths
 
@@ -840,8 +842,8 @@ sudo supervisorctl start all
 
 **Automated (Recommended):**
 ```bash
-# Permissions are automatically configured by laravel-app-setup.sh
-sudo ./laravel-app-setup.sh
+# Permissions are automatically configured by app-setup.sh
+sudo ./app-setup.sh
 # This handles all user, ownership, and permission configuration
 ```
 

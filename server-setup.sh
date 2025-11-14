@@ -207,48 +207,6 @@ fi
 
 echo ""
 
-# Install Git
-log_step "Installing Git"
-echo ""
-
-if command -v git &>/dev/null; then
-    log_info "Git is already installed"
-    GIT_VERSION=$(git --version)
-    log_info "Version: $GIT_VERSION"
-else
-    read -p "Git is not installed. Install now? [Y/n]: " install_git
-    if [[ ! "$install_git" =~ ^[Nn]$ ]]; then
-        log_info "Installing Git..."
-
-        case $OS in
-            ubuntu|debian)
-                apt-get update
-                apt-get install -y git
-                ;;
-            centos|rhel|fedora|rocky|almalinux)
-                yum install -y git
-                ;;
-            *)
-                log_error "Unsupported OS for automatic Git installation"
-                log_info "Please install Git manually"
-                ;;
-        esac
-
-        if command -v git &>/dev/null; then
-            log_success "Git installed successfully"
-            GIT_VERSION=$(git --version)
-            log_info "Version: $GIT_VERSION"
-        else
-            log_error "Git installation failed"
-        fi
-    else
-        log_warn "Skipping Git installation"
-        log_info "Note: Git is required for deploying Laravel applications from repositories"
-    fi
-fi
-
-echo ""
-
 # Save server configuration
 log_step "Saving Server Configuration"
 echo ""
@@ -281,11 +239,6 @@ if command -v php &>/dev/null; then
 else
     echo "  PHP: Not installed"
 fi
-if command -v git &>/dev/null; then
-    echo "  Git: $(git --version | cut -d ' ' -f 3)"
-else
-    echo "  Git: Not installed"
-fi
 echo "  Web Server User: $WEB_SERVER_USER"
 echo "  Web Server Group: $WEB_SERVER_GROUP"
 if command -v supervisorctl &>/dev/null; then
@@ -299,7 +252,7 @@ echo "  Next Steps"
 echo "========================================="
 echo ""
 echo "1. Deploy your Laravel application:"
-echo "   sudo ./laravel-app-setup.sh"
+echo "   sudo ./app-setup.sh"
 echo ""
 echo "2. The app setup script will:"
 echo "   - Configure user and permissions for your Laravel app"

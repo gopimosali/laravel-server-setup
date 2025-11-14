@@ -56,7 +56,7 @@ SERVER_CONFIG_FILE="$SCRIPT_DIR/.laravel-server-config"
 if [ ! -f "$SERVER_CONFIG_FILE" ]; then
     log_error "Server configuration not found!"
     echo ""
-    echo "Please run ./laravel-server-setup.sh first to prepare your server."
+    echo "Please run ./server-setup.sh first to prepare your server."
     exit 1
 fi
 
@@ -679,7 +679,7 @@ if [ "$SKIP_SERVICES" = false ] && [ ${#SERVICES_TO_SETUP[@]} -gt 0 ]; then
 
     # Copy and configure supervisor files
     for service in "${SERVICES_TO_SETUP[@]}"; do
-        SOURCE_FILE="$SCRIPT_DIR/supervisor-$service.conf.sample"
+        SOURCE_FILE="$SCRIPT_DIR/config/supervisor-$service.conf.sample"
         DEST_FILE="/etc/supervisor/conf.d/laravel-$service.conf"
 
         if [ ! -f "$SOURCE_FILE" ]; then
