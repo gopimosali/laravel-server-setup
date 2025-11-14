@@ -24,7 +24,11 @@
 ; Update the path to your Laravel application
 command=php /var/www/html/artisan pulse:work
 
-; User to run the process as (typically the web server user)
+; User to run the process as (must match your web server user)
+; - Ubuntu/Debian with Apache or Nginx: www-data
+; - CentOS/RHEL with Apache: apache
+; - CentOS/RHEL with Nginx: nginx
+; Use the update-supervisor-user.sh script to automatically set this
 user=www-data
 
 ; Number of processes to maintain

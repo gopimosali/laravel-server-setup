@@ -12,6 +12,8 @@ Automated installation script for PHP 8.4 with support for Ubuntu and Alpine Lin
 - **`supervisor-horizon.conf.sample`** - Supervisor config for Laravel Horizon queue worker
 - **`supervisor-pulse.conf.sample`** - Supervisor config for Laravel Pulse monitoring
 - **`supervisor-schedule.conf.sample`** - Supervisor config for Laravel task scheduler
+- **`update-supervisor-user.sh`** - Utility to update user in Supervisor configs based on web server
+- **`fix-laravel-permissions.sh`** - Utility to set correct Laravel file ownership and permissions
 - **`README.md`** - This documentation
 
 ## Features
@@ -379,9 +381,50 @@ sudo systemctl enable supervisor
 sudo systemctl start supervisor
 ```
 
-#### Setting Up Laravel Services
+#### Automated Setup (Recommended)
 
-**General Setup Process:**
+Use the provided utility scripts to automatically configure supervisor files and Laravel permissions:
+
+**1. Update Supervisor User Configuration:**
+
+```bash
+# Run the update script - it will detect your web server
+chmod +x update-supervisor-user.sh
+./update-supervisor-user.sh
+
+# The script will:
+# - Auto-detect your web server (Apache/Nginx)
+# - Determine the correct user (www-data, nginx, apache)
+# - Update all supervisor config files
+# - Create backups of original files
+```
+
+**2. Fix Laravel File Permissions:**
+
+```bash
+# Run the permissions fixer (requires sudo)
+chmod +x fix-laravel-permissions.sh
+sudo ./fix-laravel-permissions.sh
+
+# The script will:
+# - Auto-detect your web server
+# - Set correct ownership for your Laravel app
+# - Apply proper permissions (755 for dirs, 644 for files)
+# - Make storage/ and bootstrap/cache/ writable (775)
+```
+
+#### Manual Setup Process
+
+If you prefer to configure manually:
+
+**Step 1: Update User in Config Files**
+
+Edit each supervisor config file and update the `user=` line to match your web server user:
+- Ubuntu/Debian with Apache or Nginx: `www-data`
+- CentOS/RHEL with Apache: `apache`
+- CentOS/RHEL with Nginx: `nginx`
+
+**Step 2: Copy and Configure**
 
 ```bash
 # 1. Copy the sample file(s) you need to /etc/supervisor/conf.d/
@@ -527,15 +570,24 @@ sudo supervisorctl update
 ```bash
 # Install Laravel
 composer create-project laravel/laravel my-app
-
-# Configure permissions (Ubuntu)
 cd my-app
-sudo chown -R www-data:www-data storage bootstrap/cache
-sudo chmod -R 775 storage bootstrap/cache
 
 # Configure your .env file
 cp .env.example .env
 php artisan key:generate
+
+# Option 1: Use automated permissions fixer (Recommended)
+cd /path/to/laravel-server-setup
+sudo ./fix-laravel-permissions.sh
+# Then enter your Laravel path when prompted
+
+# Option 2: Manual permissions setup
+sudo chown -R www-data:www-data /path/to/my-app
+sudo find /path/to/my-app -type d -exec chmod 755 {} \;
+sudo find /path/to/my-app -type f -exec chmod 644 {} \;
+sudo chmod -R 775 /path/to/my-app/storage
+sudo chmod -R 775 /path/to/my-app/bootstrap/cache
+sudo chmod 755 /path/to/my-app/artisan
 
 # Run migrations (if database installed)
 php artisan migrate
@@ -547,6 +599,26 @@ npm install
 npm run build       # For production
 npm run dev         # For development
 ```
+
+### File Permissions Guide
+
+**Automated (Recommended):**
+```bash
+# Use the fix-laravel-permissions.sh script
+sudo ./fix-laravel-permissions.sh
+```
+
+**Manual Setup:**
+- **Directories**: 755 (rwxr-xr-x)
+- **Files**: 644 (rw-r--r--)
+- **storage/**: 775 (rwxrwxr-x) - Must be writable
+- **bootstrap/cache/**: 775 (rwxrwxr-x) - Must be writable
+- **.env**: 600 (rw-------) - Secure sensitive data
+- **Owner**: Web server user (www-data, nginx, apache)
+
+**Important:** The web server user must have write access to:
+- `storage/` and all subdirectories
+- `bootstrap/cache/`
 
 **Note**: For detailed web server configuration, see the [Configuration](#configuration) section above which includes complete sample files for both Apache and Nginx.
 
