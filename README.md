@@ -6,10 +6,12 @@ Automated installation script for PHP 8.4 with support for Ubuntu and Alpine Lin
 
 - **OS Support**: Ubuntu and Alpine Linux
 - **PHP 8.4**: Latest PHP version with common extensions
+- **All Database Clients**: MySQL and PostgreSQL extensions always installed
+- **Redis Extension**: Always installed for caching support
 - **Interactive Setup** (Ubuntu only):
   - Web server selection (Apache or Nginx)
-  - Database selection (MySQL, PostgreSQL, or None)
-  - Redis cache option
+  - Database server installation (MySQL Server, PostgreSQL Server, or None)
+  - Redis server installation option
 - **Automatic Composer Installation**
 - **Complete Laravel/PHP Application Stack**
 
@@ -35,18 +37,20 @@ sudo ./setup-php84.sh
 
 When running on Ubuntu, you'll be prompted to make the following selections:
 
+**Note**: Database client extensions (MySQL & PostgreSQL) and Redis extension are **always installed** regardless of your choices. The prompts below are only for installing the actual **servers**.
+
 #### 1. Web Server
 - **Apache** - Traditional web server with mod_php
 - **Nginx** - Modern web server with PHP-FPM
 
-#### 2. Database
-- **MySQL** - Popular relational database
-- **PostgreSQL** - Advanced relational database
-- **None** - Skip database installation
+#### 2. Database Server (Client extensions always installed)
+- **MySQL Server** - Install MySQL database server
+- **PostgreSQL Server** - Install PostgreSQL database server
+- **None** - Skip server installation (you can connect to remote databases using the installed client extensions)
 
-#### 3. Redis
-- **Yes** - Install Redis cache server
-- **No** - Skip Redis installation
+#### 3. Redis Server (Redis extension always installed)
+- **Yes** - Install Redis server locally
+- **No** - Skip server installation (you can connect to remote Redis using the installed extension)
 
 ### Alpine Installation
 
@@ -79,11 +83,11 @@ The script installs the following PHP 8.4 extensions:
 - `tokenizer` - Tokenizer support
 - `fileinfo` - File information support
 
-### Database Extensions (based on selection)
-- `mysql`/`mysqli`/`pdo_mysql` - MySQL support
-- `pgsql`/`pdo_pgsql` - PostgreSQL support
+### Database Extensions (Always Installed)
+- `mysql`/`mysqli`/`pdo_mysql` - MySQL client support
+- `pgsql`/`pdo_pgsql` - PostgreSQL client support
 
-### Cache Extensions (optional)
+### Cache Extensions (Always Installed)
 - `redis` - Redis support
 
 ## Post-Installation

@@ -51,17 +51,17 @@ install_ubuntu() {
     echo "2) Nginx"
     read -p "Enter choice [1-2]: " webserver_choice
 
-    # Prompt for database
+    # Prompt for database server installation
     echo ""
-    echo "Select database:"
-    echo "1) MySQL"
-    echo "2) PostgreSQL"
+    echo "Install database server? (Note: Database client extensions will be installed regardless)"
+    echo "1) MySQL Server"
+    echo "2) PostgreSQL Server"
     echo "3) None"
     read -p "Enter choice [1-3]: " database_choice
 
-    # Prompt for Redis
+    # Prompt for Redis server installation
     echo ""
-    echo "Install Redis?"
+    echo "Install Redis Server? (Note: Redis extension will be installed regardless)"
     echo "1) Yes"
     echo "2) No"
     read -p "Enter choice [1-2]: " redis_choice
@@ -98,28 +98,13 @@ install_ubuntu() {
         php8.4-readline
         php8.4-tokenizer
         php8.4-fileinfo
+        php8.4-mysql
+        php8.4-pgsql
+        php8.4-redis
     )
 
-    # Add database extensions based on choice
-    case $database_choice in
-        1)
-            log_info "Adding MySQL support..."
-            PHP_PACKAGES+=(php8.4-mysql)
-            ;;
-        2)
-            log_info "Adding PostgreSQL support..."
-            PHP_PACKAGES+=(php8.4-pgsql)
-            ;;
-        3)
-            log_info "Skipping database extension..."
-            ;;
-    esac
-
-    # Add Redis extension if selected
-    if [ "$redis_choice" == "1" ]; then
-        log_info "Adding Redis support..."
-        PHP_PACKAGES+=(php8.4-redis)
-    fi
+    log_info "Installing database client extensions (MySQL & PostgreSQL)..."
+    log_info "Installing Redis extension..."
 
     apt-get install -y "${PHP_PACKAGES[@]}"
 
@@ -151,33 +136,35 @@ install_ubuntu() {
             ;;
     esac
 
-    # Install database
+    # Install database server
     case $database_choice in
         1)
-            log_info "Installing MySQL..."
+            log_info "Installing MySQL Server..."
             apt-get install -y mysql-server
             systemctl enable mysql
             systemctl start mysql
             log_warn "Please run 'mysql_secure_installation' to secure your MySQL installation"
             ;;
         2)
-            log_info "Installing PostgreSQL..."
+            log_info "Installing PostgreSQL Server..."
             apt-get install -y postgresql postgresql-contrib
             systemctl enable postgresql
             systemctl start postgresql
             log_warn "PostgreSQL installed. Default user is 'postgres'"
             ;;
         3)
-            log_info "Skipping database installation..."
+            log_info "Skipping database server installation (client extensions already installed)..."
             ;;
     esac
 
-    # Install Redis
+    # Install Redis server
     if [ "$redis_choice" == "1" ]; then
-        log_info "Installing Redis..."
+        log_info "Installing Redis Server..."
         apt-get install -y redis-server
         systemctl enable redis-server
         systemctl start redis-server
+    else
+        log_info "Skipping Redis server installation (Redis extension already installed)..."
     fi
 
     # Install Composer
