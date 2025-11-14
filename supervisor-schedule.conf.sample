@@ -1,0 +1,270 @@
+;------------------------------------------------------------
+; Laravel Scheduler Supervisor Configuration
+;------------------------------------------------------------
+; Supervisor configuration for managing Laravel's task scheduler
+; The scheduler runs scheduled tasks defined in app/Console/Kernel.php
+;
+; Laravel's scheduler requires a cron job or continuous process
+; that runs "php artisan schedule:run" every minute.
+;
+; This configuration uses "php artisan schedule:work" which runs
+; continuously and executes scheduled tasks automatically.
+;
+; Installation:
+; 1. Copy this file to /etc/supervisor/conf.d/
+;    sudo cp supervisor-schedule.conf.sample /etc/supervisor/conf.d/laravel-schedule.conf
+;
+; 2. Update the configuration below with your application details
+;
+; 3. Reload Supervisor:
+;    sudo supervisorctl reread
+;    sudo supervisorctl update
+;    sudo supervisorctl start laravel-schedule:*
+;------------------------------------------------------------
+
+[program:laravel-schedule]
+; The command to run - schedule:work runs the scheduler continuously
+; Update the path to your Laravel application
+command=php /var/www/html/artisan schedule:work
+
+; User to run the process as (must match your web server user)
+; - Ubuntu/Debian with Apache or Nginx: www-data
+; - CentOS/RHEL with Apache: apache
+; - CentOS/RHEL with Nginx: nginx
+; Use the update-supervisor-user.sh script to automatically set this
+user=www-data
+
+; Number of processes to maintain (only 1 needed for scheduler)
+numprocs=1
+
+; Process name format
+process_name=%(program_name)s_%(process_num)02d
+
+; Auto-start on supervisor start
+autostart=true
+
+; Auto-restart on unexpected termination
+autorestart=true
+
+; Redirect stderr to stdout
+redirect_stderr=true
+
+; Log file locations - create these directories if they don't exist
+stdout_logfile=/var/www/html/storage/logs/scheduler.log
+stdout_logfile_maxbytes=10MB
+stdout_logfile_backups=10
+
+; How long to wait before considering the process started successfully
+startsecs=3
+
+; Stop wait timeout
+stopwaitsecs=30
+
+; Stop signal - TERM allows graceful shutdown
+stopsignal=TERM
+
+; Process priority (lower number = higher priority)
+priority=100
+
+
+;------------------------------------------------------------
+; ALTERNATIVE: Traditional Cron Approach
+;------------------------------------------------------------
+; Instead of using supervisor, you can use the traditional cron approach.
+; This is the most common method and recommended by Laravel documentation.
+;
+; To set up cron (alternative to this supervisor config):
+;
+; 1. Edit crontab:
+;    sudo crontab -e -u www-data
+;
+; 2. Add this line:
+;    * * * * * cd /var/www/html && php artisan schedule:run >> /dev/null 2>&1
+;
+; 3. Save and exit
+;
+; Choose either supervisor (this file) OR cron, not both!
+;------------------------------------------------------------
+
+
+;------------------------------------------------------------
+; CONFIGURATION CHECKLIST
+;------------------------------------------------------------
+; Before enabling this configuration, ensure:
+;
+; 1. Scheduled tasks are defined in app/Console/Kernel.php:
+;    protected function schedule(Schedule $schedule)
+;    {
+;        $schedule->command('inspire')->hourly();
+;        // Add your scheduled tasks here
+;    }
+;
+; 2. Update paths in this file:
+;    - command: Path to your Laravel installation
+;    - stdout_logfile: Path to your storage/logs directory
+;    - user: Web server user (www-data, nginx, apache, etc.)
+;
+; 3. Storage logs directory is writable:
+;    sudo chown -R www-data:www-data /var/www/html/storage/logs
+;
+; 4. Required PHP extensions are installed (typically already done)
+;
+; 5. If you're using cron instead, REMOVE this supervisor config to avoid conflicts
+;
+; 6. Environment variables are properly set in .env
+;
+;------------------------------------------------------------
+; MONITORING & MANAGEMENT
+;------------------------------------------------------------
+; Check status:
+;   sudo supervisorctl status laravel-schedule:*
+;
+; Start process:
+;   sudo supervisorctl start laravel-schedule:*
+;
+; Stop process:
+;   sudo supervisorctl stop laravel-schedule:*
+;
+; Restart process (after code deployment):
+;   sudo supervisorctl restart laravel-schedule:*
+;
+; View logs:
+;   sudo supervisorctl tail -f laravel-schedule:laravel-schedule_00 stdout
+;
+; Test scheduled tasks:
+;   php artisan schedule:list
+;   php artisan schedule:run (manual run)
+;   php artisan schedule:test (test specific task)
+;
+;------------------------------------------------------------
+; SCHEDULED TASK EXAMPLES
+;------------------------------------------------------------
+; In app/Console/Kernel.php:
+;
+; protected function schedule(Schedule $schedule): void
+; {
+;     // Run backup daily at 1 AM
+;     $schedule->command('backup:run')
+;              ->daily()
+;              ->at('01:00');
+;
+;     // Clear cache every hour
+;     $schedule->command('cache:clear')
+;              ->hourly();
+;
+;     // Run custom command every 5 minutes
+;     $schedule->command('app:process-orders')
+;              ->everyFiveMinutes()
+;              ->withoutOverlapping();
+;
+;     // Send weekly report every Monday at 8 AM
+;     $schedule->command('reports:weekly')
+;              ->weeklyOn(1, '8:00');
+;
+;     // Queue a job every 15 minutes
+;     $schedule->job(new ProcessPendingOrders)
+;              ->everyFifteenMinutes();
+;
+;     // Run closure every minute
+;     $schedule->call(function () {
+;         // Custom logic
+;     })->everyMinute();
+;
+;     // Execute shell command daily
+;     $schedule->exec('node /home/forge/script.js')
+;              ->daily();
+; }
+;
+;------------------------------------------------------------
+; SCHEDULE CONSTRAINTS & OPTIONS
+;------------------------------------------------------------
+; Common scheduling frequencies:
+;   ->everyMinute()           Every minute
+;   ->everyFiveMinutes()      Every 5 minutes
+;   ->everyTenMinutes()       Every 10 minutes
+;   ->everyFifteenMinutes()   Every 15 minutes
+;   ->everyThirtyMinutes()    Every 30 minutes
+;   ->hourly()                Every hour
+;   ->hourlyAt(17)            Every hour at 17 minutes past
+;   ->daily()                 Daily at midnight
+;   ->dailyAt('13:00')        Daily at 1 PM
+;   ->twiceDaily(1, 13)       Daily at 1 AM and 1 PM
+;   ->weekly()                Weekly on Sunday at midnight
+;   ->weeklyOn(1, '8:00')     Weekly on Monday at 8 AM
+;   ->monthly()               Monthly on the 1st at midnight
+;   ->monthlyOn(4, '15:00')   Monthly on the 4th at 3 PM
+;   ->quarterly()             Quarterly on the 1st at midnight
+;   ->yearly()                Yearly on Jan 1st at midnight
+;   ->timezone('America/New_York')  Set timezone
+;
+; Constraints:
+;   ->weekdays()              Run only on weekdays
+;   ->weekends()              Run only on weekends
+;   ->sundays()               Run only on Sundays
+;   ->mondays()               Run only on Mondays
+;   (etc. for other days)
+;   ->between('7:00', '22:00')     Run between hours
+;   ->unlessBetween('23:00', '4:00')  Don't run between hours
+;   ->when(Closure)           Run when closure returns true
+;   ->environments(['production'])  Run only in specific envs
+;
+; Task options:
+;   ->withoutOverlapping()    Prevent task overlap
+;   ->onOneServer()           Run on only one server
+;   ->runInBackground()       Run in background
+;   ->sendOutputTo($file)     Send output to file
+;   ->appendOutputTo($file)   Append output to file
+;   ->emailOutputTo($email)   Email output
+;   ->emailOutputOnFailure($email)  Email only on failure
+;   ->before(Closure)         Run before task
+;   ->after(Closure)          Run after task
+;   ->onSuccess(Closure)      Run on success
+;   ->onFailure(Closure)      Run on failure
+;   ->evenInMaintenanceMode() Run even in maintenance mode
+;
+;------------------------------------------------------------
+; PRODUCTION CONSIDERATIONS
+;------------------------------------------------------------
+; 1. Use ->withoutOverlapping() for long-running tasks to prevent
+;    multiple instances running simultaneously
+;
+; 2. Use ->onOneServer() in clustered environments to ensure tasks
+;    run on only one server (requires cache driver with locking)
+;
+; 3. Set up error notifications:
+;    $schedule->command('backup:run')
+;             ->daily()
+;             ->onFailure(function () {
+;                 // Send notification
+;             });
+;
+; 4. Monitor scheduled task execution:
+;    - Check logs regularly
+;    - Use monitoring tools like Laravel Pulse or Horizon
+;    - Set up alerting for failed tasks
+;
+; 5. Set appropriate timeouts for long-running tasks
+;
+; 6. Use queues for heavy tasks instead of running them directly
+;    in the scheduler:
+;    $schedule->job(new HeavyTask)->hourly();
+;
+; 7. Test scheduled tasks before deploying:
+;    php artisan schedule:list
+;    php artisan schedule:test
+;
+; 8. Set up log rotation for stdout_logfile
+;
+; 9. Document all scheduled tasks in app/Console/Kernel.php
+;
+; 10. Consider timezone implications for scheduled tasks
+;
+; 11. Use maintenance mode wisely - some tasks should run even
+;     during maintenance:
+;     ->evenInMaintenanceMode()
+;
+; 12. Supervisor vs Cron:
+;     - Supervisor: Continuous process, immediate restarts, easier logs
+;     - Cron: Traditional, well-tested, lower memory footprint
+;     Choose based on your infrastructure and monitoring needs
+;------------------------------------------------------------

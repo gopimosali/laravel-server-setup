@@ -1,0 +1,206 @@
+;------------------------------------------------------------
+; Laravel Pulse Supervisor Configuration
+;------------------------------------------------------------
+; Supervisor configuration for managing Laravel Pulse data recording
+; Pulse provides application monitoring and performance insights
+;
+; Note: Pulse can record data via queue workers (if using database driver)
+; or via the pulse:check command. This configuration runs the check command.
+;
+; Installation:
+; 1. Copy this file to /etc/supervisor/conf.d/
+;    sudo cp supervisor-pulse.conf.sample /etc/supervisor/conf.d/laravel-pulse.conf
+;
+; 2. Update the configuration below with your application details
+;
+; 3. Reload Supervisor:
+;    sudo supervisorctl reread
+;    sudo supervisorctl update
+;    sudo supervisorctl start laravel-pulse:*
+;------------------------------------------------------------
+
+[program:laravel-pulse]
+; The command to run - Pulse work command to process recorded data
+; Update the path to your Laravel application
+command=php /var/www/html/artisan pulse:work
+
+; User to run the process as (must match your web server user)
+; - Ubuntu/Debian with Apache or Nginx: www-data
+; - CentOS/RHEL with Apache: apache
+; - CentOS/RHEL with Nginx: nginx
+; Use the update-supervisor-user.sh script to automatically set this
+user=www-data
+
+; Number of processes to maintain
+numprocs=1
+
+; Process name format
+process_name=%(program_name)s_%(process_num)02d
+
+; Auto-start on supervisor start
+autostart=true
+
+; Auto-restart on unexpected termination
+autorestart=true
+
+; Redirect stderr to stdout
+redirect_stderr=true
+
+; Log file locations - create these directories if they don't exist
+stdout_logfile=/var/www/html/storage/logs/pulse.log
+stdout_logfile_maxbytes=10MB
+stdout_logfile_backups=5
+
+; How long to wait before considering the process started successfully
+startsecs=3
+
+; Stop wait timeout
+stopwaitsecs=30
+
+; Stop signal - TERM allows graceful shutdown
+stopsignal=TERM
+
+; Process priority (lower number = higher priority)
+priority=100
+
+
+;------------------------------------------------------------
+; ALTERNATIVE: Pulse Check Command (Periodic Checks)
+;------------------------------------------------------------
+; If you prefer periodic checks instead of continuous processing,
+; you can use pulse:check with a cron-like approach via supervisor.
+; Uncomment the section below and comment out the [program:laravel-pulse] above.
+;
+; Note: This is less common. Most users should use pulse:work (above)
+; or rely on Laravel's scheduler + queue workers.
+;
+;[program:laravel-pulse-check]
+;command=php /var/www/html/artisan pulse:check
+;user=www-data
+;numprocs=1
+;autostart=true
+;autorestart=true
+;redirect_stderr=true
+;stdout_logfile=/var/www/html/storage/logs/pulse-check.log
+;startsecs=0
+;stopwaitsecs=10
+
+
+;------------------------------------------------------------
+; CONFIGURATION CHECKLIST
+;------------------------------------------------------------
+; Before enabling this configuration, ensure:
+;
+; 1. Laravel Pulse is installed:
+;    composer require laravel/pulse
+;    php artisan vendor:publish --provider="Laravel\Pulse\PulseServiceProvider"
+;    php artisan migrate
+;
+; 2. Pulse is configured in config/pulse.php:
+;    - Storage driver (database or redis)
+;    - Recorders are enabled
+;    - Ingestion settings are configured
+;
+; 3. Update paths in this file:
+;    - command: Path to your Laravel installation
+;    - stdout_logfile: Path to your storage/logs directory
+;    - user: Web server user (www-data, nginx, apache, etc.)
+;
+; 4. Storage logs directory is writable:
+;    sudo chown -R www-data:www-data /var/www/html/storage/logs
+;
+; 5. Database connection is configured (if using database driver)
+;
+; 6. Dashboard route is protected:
+;    Configure Pulse::auth() in App\Providers\AppServiceProvider
+;
+; 7. Middleware is configured in config/pulse.php:
+;    'middleware' => ['web', 'auth']
+;
+;------------------------------------------------------------
+; MONITORING & MANAGEMENT
+;------------------------------------------------------------
+; Check status:
+;   sudo supervisorctl status laravel-pulse:*
+;
+; Start process:
+;   sudo supervisorctl start laravel-pulse:*
+;
+; Stop process:
+;   sudo supervisorctl stop laravel-pulse:*
+;
+; Restart process:
+;   sudo supervisorctl restart laravel-pulse:*
+;
+; View logs:
+;   sudo supervisorctl tail -f laravel-pulse:laravel-pulse_00 stdout
+;
+; Access dashboard:
+;   https://your-domain.com/pulse
+;
+;------------------------------------------------------------
+; PULSE RECORDING METHODS
+;------------------------------------------------------------
+; Pulse can record data in several ways:
+;
+; 1. Middleware (automatic - recommended):
+;    - Records request data automatically
+;    - Configured in config/pulse.php middleware array
+;
+; 2. Queue Worker Processing:
+;    - If using 'ingest.driver' => 'redis' in config/pulse.php
+;    - Your queue workers will process pulse data
+;    - No separate supervisor config needed if Horizon is running
+;
+; 3. Pulse Work Command (this file):
+;    - Dedicated process for handling Pulse data
+;    - Use when you want Pulse isolated from other queue jobs
+;
+; 4. Scheduled Commands:
+;    - Configure in app/Console/Kernel.php
+;    - Use Laravel scheduler (see supervisor-schedule.conf.sample)
+;
+;------------------------------------------------------------
+; PRODUCTION CONSIDERATIONS
+;------------------------------------------------------------
+; 1. Choose appropriate storage driver (database vs redis):
+;    - Database: More persistent, easier backup
+;    - Redis: Better performance, requires more memory
+;
+; 2. Configure data retention in config/pulse.php:
+;    'trim' => [
+;        'lottery' => [1, 1000],
+;        'keep' => '7 days',
+;    ]
+;
+; 3. Enable only necessary recorders to reduce overhead:
+;    'recorders' => [
+;        Recorders\CacheInteractions::class => [...],
+;        Recorders\Exceptions::class => [...],
+;        // etc.
+;    ]
+;
+; 4. Protect the Pulse dashboard with authentication
+;
+; 5. Monitor Pulse's own performance impact on your application
+;
+; 6. Set up log rotation for stdout_logfile
+;
+; 7. Configure sampling rates to reduce data volume:
+;    'recorders' => [
+;        Recorders\Exceptions::class => [
+;            'sample_rate' => 1, // 100% - adjust as needed
+;        ],
+;    ]
+;
+; 8. If using Redis storage, monitor Redis memory usage
+;
+; 9. Consider using Pulse in production only, disable in development
+;    if performance is a concern
+;
+; 10. Use queue-based ingestion for high-traffic applications:
+;     'ingest' => [
+;         'driver' => 'redis',
+;         // ...
+;     ]
+;------------------------------------------------------------

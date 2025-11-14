@@ -2,13 +2,52 @@
 
 Automated installation script for PHP 8.4 with support for Ubuntu and Alpine Linux.
 
+## Quick Start
+
+### Complete Laravel Server Setup (3 Simple Steps)
+
+```bash
+# 1. Install PHP 8.4 and web server
+chmod +x setup-php84.sh
+sudo ./setup-php84.sh
+
+# 2. Configure server for Laravel (one-time setup)
+chmod +x laravel-server-setup.sh
+sudo ./laravel-server-setup.sh
+# Choose: Production or Development
+# Enter username (production) or use web server user (development)
+
+# 3. Deploy your Laravel application
+chmod +x laravel-app-setup.sh
+sudo ./laravel-app-setup.sh
+# Enter Laravel app path
+# Select services (Horizon, Reverb, Pulse, Schedule)
+```
+
+That's it! Your Laravel application is now configured with proper permissions and services.
+
 ## Repository Contents
 
-- **`setup-php84.sh`** - Main installation script
+### Main Setup Scripts (Recommended)
+- **`laravel-server-setup.sh`** - **⭐ ONE-TIME** server configuration (environment, user, supervisor)
+- **`laravel-app-setup.sh`** - **Per-application** setup (run for each Laravel app)
+
+### PHP & Web Server Setup
+- **`setup-php84.sh`** - PHP 8.4 installation script
 - **`php.ini.sample`** - Production-ready PHP configuration
 - **`apache-virtualhost.conf.sample`** - Apache virtual host template
 - **`nginx-virtualhost.conf.sample`** - Nginx server block template
-- **`README.md`** - This documentation
+
+### Supervisor Configuration Templates
+- **`supervisor-reverb.conf.sample`** - Supervisor config for Laravel Reverb WebSocket server
+- **`supervisor-horizon.conf.sample`** - Supervisor config for Laravel Horizon queue worker
+- **`supervisor-pulse.conf.sample`** - Supervisor config for Laravel Pulse monitoring
+- **`supervisor-schedule.conf.sample`** - Supervisor config for Laravel task scheduler
+
+### Advanced/Individual Scripts (Optional)
+- **`setup-laravel-user.sh`** - Create dedicated user for Laravel services
+- **`update-supervisor-user.sh`** - Update user in Supervisor configs
+- **`fix-laravel-permissions.sh`** - Set correct Laravel file ownership and permissions
 
 ## Features
 
@@ -24,15 +63,22 @@ Automated installation script for PHP 8.4 with support for Ubuntu and Alpine Lin
   - Optional extensions (Imagick, Xdebug, Memcached, APCu, MongoDB, LDAP, IMAP, SSH2, Swoole, AMQP)
 - **Automatic Composer Installation**
 - **Complete Laravel/PHP Application Stack**
-- **Sample Configuration Files**: Production-ready configs for PHP, Apache, and Nginx
+- **Sample Configuration Files**: Production-ready configs for PHP, Apache, Nginx, and Supervisor
 
 ## Configuration Files
 
 This repository includes sample configuration files to help you set up your server:
 
+### Web Server & PHP
 - **`php.ini.sample`** - Production-ready PHP 8.4 configuration with security best practices
 - **`apache-virtualhost.conf.sample`** - Apache virtual host configuration for Laravel/PHP apps
 - **`nginx-virtualhost.conf.sample`** - Nginx server block configuration for Laravel/PHP apps
+
+### Laravel Services (Supervisor)
+- **`supervisor-reverb.conf.sample`** - Supervisor config for Laravel Reverb (WebSocket server)
+- **`supervisor-horizon.conf.sample`** - Supervisor config for Laravel Horizon (queue management)
+- **`supervisor-pulse.conf.sample`** - Supervisor config for Laravel Pulse (application monitoring)
+- **`supervisor-schedule.conf.sample`** - Supervisor config for Laravel Scheduler (task scheduling)
 
 See the [Configuration](#configuration) section for detailed instructions on using these files.
 
@@ -345,31 +391,431 @@ sudo certbot --nginx -d example.com -d www.example.com
 sudo certbot renew --dry-run
 ```
 
+### Supervisor Configuration for Laravel Services
+
+The repository includes Supervisor configuration files for managing Laravel's long-running processes. Supervisor ensures these services stay running and automatically restarts them if they crash.
+
+#### Available Configurations
+
+1. **Laravel Reverb** (`supervisor-reverb.conf.sample`) - WebSocket server
+2. **Laravel Horizon** (`supervisor-horizon.conf.sample`) - Queue worker management
+3. **Laravel Pulse** (`supervisor-pulse.conf.sample`) - Application monitoring
+4. **Laravel Scheduler** (`supervisor-schedule.conf.sample`) - Task scheduling
+
+#### Streamlined Setup (RECOMMENDED)
+
+Use the integrated setup scripts for the easiest experience:
+
+**Step 1: Server Setup (One-Time)**
+
+```bash
+chmod +x laravel-server-setup.sh
+sudo ./laravel-server-setup.sh
+```
+
+This script will:
+- Prompt for environment (Production or Development)
+- Create dedicated user (Production) or use web server user (Development)
+- Install Supervisor if needed
+- Configure all supervisor templates with correct user
+- Save configuration for app deployments
+
+**Step 2: Application Setup (Per Laravel App)**
+
+```bash
+chmod +x laravel-app-setup.sh
+sudo ./laravel-app-setup.sh
+```
+
+This script will:
+- Read server configuration from step 1
+- Set correct ownership and permissions for your Laravel app
+- Let you select which services to enable (Horizon, Reverb, Pulse, Schedule)
+- Copy and configure supervisor configs with correct paths
+- Start the selected services
+
+**Benefits of Streamlined Approach:**
+- ✅ Single command workflow
+- ✅ Environment-aware configuration (production vs development)
+- ✅ Automatic path and user configuration
+- ✅ Service selection per application
+- ✅ Can deploy multiple Laravel apps easily
+- ✅ Saves configuration between runs
+
+#### Alternative: Individual Setup Scripts
+
+If you prefer more control or manual configuration:
+
+**Option A: Create Dedicated Laravel User**
+
+```bash
+chmod +x setup-laravel-user.sh
+sudo ./setup-laravel-user.sh
+```
+
+**Option B: Update Supervisor User Only**
+
+```bash
+chmod +x update-supervisor-user.sh
+./update-supervisor-user.sh
+```
+
+**Option C: Fix Permissions Only**
+
+```bash
+chmod +x fix-laravel-permissions.sh
+sudo ./fix-laravel-permissions.sh
+```
+
+**Note:** The streamlined scripts (`laravel-server-setup.sh` and `laravel-app-setup.sh`) are recommended as they handle all of this automatically.
+
+#### Manual Setup Process
+
+If you prefer to configure manually:
+
+**Step 1: Update User in Config Files**
+
+Edit each supervisor config file and update the `user=` line to match your web server user:
+- Ubuntu/Debian with Apache or Nginx: `www-data`
+- CentOS/RHEL with Apache: `apache`
+- CentOS/RHEL with Nginx: `nginx`
+
+**Step 2: Copy and Configure**
+
+```bash
+# 1. Copy the sample file(s) you need to /etc/supervisor/conf.d/
+sudo cp supervisor-horizon.conf.sample /etc/supervisor/conf.d/laravel-horizon.conf
+
+# 2. Edit the configuration file
+sudo nano /etc/supervisor/conf.d/laravel-horizon.conf
+
+# Update these values:
+# - command: Path to your Laravel installation
+# - user: Your web server user (www-data, nginx, etc.)
+# - stdout_logfile: Path to your log directory
+
+# 3. Reload Supervisor to recognize the new configuration
+sudo supervisorctl reread
+sudo supervisorctl update
+
+# 4. Start the service
+sudo supervisorctl start laravel-horizon:*
+
+# 5. Check status
+sudo supervisorctl status
+```
+
+#### Service-Specific Setup
+
+**Laravel Horizon (Queue Management):**
+
+```bash
+# Install Horizon
+composer require laravel/horizon
+php artisan horizon:install
+php artisan migrate
+
+# Configure Supervisor
+sudo cp supervisor-horizon.conf.sample /etc/supervisor/conf.d/laravel-horizon.conf
+sudo nano /etc/supervisor/conf.d/laravel-horizon.conf
+sudo supervisorctl reread && sudo supervisorctl update
+sudo supervisorctl start laravel-horizon:*
+
+# Access dashboard: https://your-domain.com/horizon
+```
+
+**Laravel Reverb (WebSocket Server):**
+
+```bash
+# Install Reverb
+composer require laravel/reverb
+php artisan reverb:install
+
+# Configure .env
+# REVERB_APP_ID, REVERB_APP_KEY, REVERB_APP_SECRET, etc.
+
+# Configure Supervisor
+sudo cp supervisor-reverb.conf.sample /etc/supervisor/conf.d/laravel-reverb.conf
+sudo nano /etc/supervisor/conf.d/laravel-reverb.conf
+sudo supervisorctl reread && sudo supervisorctl update
+sudo supervisorctl start laravel-reverb:*
+
+# Allow firewall access to WebSocket port
+sudo ufw allow 8080/tcp
+```
+
+**Laravel Pulse (Application Monitoring):**
+
+```bash
+# Install Pulse
+composer require laravel/pulse
+php artisan vendor:publish --provider="Laravel\Pulse\PulseServiceProvider"
+php artisan migrate
+
+# Configure Supervisor
+sudo cp supervisor-pulse.conf.sample /etc/supervisor/conf.d/laravel-pulse.conf
+sudo nano /etc/supervisor/conf.d/laravel-pulse.conf
+sudo supervisorctl reread && sudo supervisorctl update
+sudo supervisorctl start laravel-pulse:*
+
+# Access dashboard: https://your-domain.com/pulse
+```
+
+**Laravel Scheduler:**
+
+```bash
+# Option 1: Using Supervisor (this config)
+sudo cp supervisor-schedule.conf.sample /etc/supervisor/conf.d/laravel-schedule.conf
+sudo nano /etc/supervisor/conf.d/laravel-schedule.conf
+sudo supervisorctl reread && sudo supervisorctl update
+sudo supervisorctl start laravel-schedule:*
+
+# Option 2: Using Cron (traditional method - choose ONE)
+sudo crontab -e -u www-data
+# Add: * * * * * cd /var/www/html && php artisan schedule:run >> /dev/null 2>&1
+
+# Test scheduled tasks
+php artisan schedule:list
+```
+
+#### Managing Supervisor Services
+
+```bash
+# Check status of all services
+sudo supervisorctl status
+
+# Start a service
+sudo supervisorctl start laravel-horizon:*
+
+# Stop a service
+sudo supervisorctl stop laravel-horizon:*
+
+# Restart a service
+sudo supervisorctl restart laravel-horizon:*
+
+# View logs
+sudo supervisorctl tail -f laravel-horizon:laravel-horizon_00 stdout
+
+# Restart all services
+sudo supervisorctl restart all
+
+# Reload Supervisor configuration
+sudo supervisorctl reread
+sudo supervisorctl update
+```
+
+#### Important Notes
+
+1. **File Paths**: Always update the paths in the config files to match your Laravel installation
+2. **User Permissions**: Ensure the user specified in the config has proper permissions to run the commands
+3. **Log Directories**: Create log directories if they don't exist and ensure they're writable
+4. **After Deployment**: Restart services after deploying new code:
+   ```bash
+   # For Horizon (graceful)
+   php artisan horizon:terminate
+
+   # For others
+   sudo supervisorctl restart laravel-reverb:*
+   sudo supervisorctl restart laravel-pulse:*
+   sudo supervisorctl restart laravel-schedule:*
+   ```
+5. **Monitoring**: Regularly check logs and service status to ensure everything is running correctly
+
+### User Configuration Best Practices
+
+#### Production Setup (Recommended)
+
+For production environments, use a **dedicated user** for Laravel services:
+
+```bash
+# Create dedicated Laravel user
+sudo ./setup-laravel-user.sh
+
+# Example user: laraveladmin, deploy, laravel, etc.
+```
+
+**Benefits:**
+- **Security Isolation**: Laravel processes run separately from web server
+- **Permission Management**: Clean separation of concerns
+- **Easier Debugging**: Clear ownership of processes and files
+- **Sudo Access**: User can manage server and Laravel without switching
+- **Group Membership**: User belongs to web server group for file sharing
+
+**File Ownership Pattern:**
+```
+Owner: laraveladmin (your dedicated user)
+Group: www-data (web server group)
+Directories: 755
+Files: 644
+storage/: 775 (owner + group can write)
+bootstrap/cache/: 775 (owner + group can write)
+```
+
+This allows:
+- Your dedicated user to manage Laravel files
+- Web server to read files and write to storage/cache
+- Supervisor processes to run as dedicated user
+
+#### Development Setup (Simpler)
+
+For development or testing, you can use the **web server user**:
+
+```bash
+# Update configs to use www-data/nginx/apache
+./update-supervisor-user.sh
+
+# Set permissions
+sudo ./fix-laravel-permissions.sh
+```
+
+**Trade-offs:**
+- ✅ Simpler setup
+- ✅ No additional user management
+- ❌ Less secure (services run as web server user)
+- ❌ Mixed ownership of processes
+
 ## Laravel Deployment Example
+
+### Streamlined Deployment (RECOMMENDED)
+
+This is the easiest and recommended approach for both production and development:
+
+```bash
+# 1. Install Laravel
+composer create-project laravel/laravel my-app
+cd my-app
+
+# 2. Configure environment
+cp .env.example .env
+php artisan key:generate
+
+# 3. Configure database
+nano .env
+# Set DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD
+
+# 4. Run migrations
+php artisan migrate
+
+# 5. Install and build frontend (if Node.js installed)
+npm install
+npm run build  # For production
+
+# 6. Deploy with integrated setup (from laravel-server-setup directory)
+cd /path/to/laravel-server-setup
+
+# If first Laravel app on this server, run server setup first:
+sudo ./laravel-server-setup.sh
+# Choose: 1) Production or 2) Development
+# Enter username (if production) or uses web server user (if development)
+
+# Then deploy your application:
+sudo ./laravel-app-setup.sh
+# Enter: /var/www/html/my-app
+# Select services: 1 2 4 (for Horizon, Reverb, Schedule)
+
+# 7. Done! Services are configured and running
+sudo supervisorctl status
+```
+
+**For additional Laravel apps on the same server:**
+Just run `sudo ./laravel-app-setup.sh` again - it reuses the server configuration!
+
+### Manual Deployment (Advanced)
+
+If you prefer manual control over each step:
+
+**Production Setup:**
 
 ```bash
 # Install Laravel
 composer create-project laravel/laravel my-app
-
-# Configure permissions (Ubuntu)
 cd my-app
-sudo chown -R www-data:www-data storage bootstrap/cache
-sudo chmod -R 775 storage bootstrap/cache
-
-# Configure your .env file
 cp .env.example .env
 php artisan key:generate
 
-# Run migrations (if database installed)
+# Create dedicated user
+cd /path/to/laravel-server-setup
+sudo ./setup-laravel-user.sh
+
+# Configure and migrate
+nano /var/www/html/my-app/.env
+cd /var/www/html/my-app
 php artisan migrate
+npm install && npm run build
 
-# Install frontend dependencies (if Node.js installed)
-npm install
+# Copy and configure supervisor files manually
+sudo cp supervisor-horizon.conf.sample /etc/supervisor/conf.d/laravel-horizon.conf
+sudo nano /etc/supervisor/conf.d/laravel-horizon.conf
+# Update paths...
 
-# Build frontend assets
-npm run build       # For production
-npm run dev         # For development
+sudo supervisorctl reread && sudo supervisorctl update
+sudo supervisorctl start all
 ```
+
+**Development Setup:**
+
+```bash
+# Install Laravel
+composer create-project laravel/laravel my-app
+cd my-app
+cp .env.example .env
+php artisan key:generate
+
+# Fix permissions
+cd /path/to/laravel-server-setup
+sudo ./fix-laravel-permissions.sh
+
+# Configure and run
+nano .env
+php artisan migrate
+npm install && npm run dev
+```
+
+### File Permissions Guide
+
+**Automated (Recommended):**
+```bash
+# Option 1: During user setup (setup-laravel-user.sh prompts for this)
+sudo ./setup-laravel-user.sh
+
+# Option 2: Standalone permissions fixer
+sudo ./fix-laravel-permissions.sh
+```
+
+**Manual Setup (Production with Dedicated User):**
+```bash
+# Assuming user: laraveladmin, web server group: www-data
+sudo chown -R laraveladmin:www-data /var/www/html/my-app
+sudo find /var/www/html/my-app -type d -exec chmod 755 {} \;
+sudo find /var/www/html/my-app -type f -exec chmod 644 {} \;
+sudo chmod -R 775 /var/www/html/my-app/storage
+sudo chmod -R 775 /var/www/html/my-app/bootstrap/cache
+sudo chmod 755 /var/www/html/my-app/artisan
+sudo chmod 640 /var/www/html/my-app/.env
+```
+
+**Manual Setup (Development with Web Server User):**
+```bash
+# Using www-data (Ubuntu/Debian)
+sudo chown -R www-data:www-data /var/www/html/my-app
+sudo find /var/www/html/my-app -type d -exec chmod 755 {} \;
+sudo find /var/www/html/my-app -type f -exec chmod 644 {} \;
+sudo chmod -R 775 /var/www/html/my-app/storage
+sudo chmod -R 775 /var/www/html/my-app/bootstrap/cache
+sudo chmod 755 /var/www/html/my-app/artisan
+```
+
+**Permission Reference:**
+- **Directories**: 755 (rwxr-xr-x) - Owner can read/write/execute, others can read/execute
+- **Files**: 644 (rw-r--r--) - Owner can read/write, others can read
+- **storage/**: 775 (rwxrwxr-x) - Owner and group can write (required for logs, cache)
+- **bootstrap/cache/**: 775 (rwxrwxr-x) - Owner and group can write (required for Laravel)
+- **.env**: 640 (rw-r-----) - Owner can read/write, group can read, others no access
+- **artisan**: 755 (rwxr-xr-x) - Executable script
+
+**Important:** Both the owner and web server group must have write access to:
+- `storage/` and all subdirectories (logs, framework, app)
+- `bootstrap/cache/` (compiled services, packages, routes, config)
 
 **Note**: For detailed web server configuration, see the [Configuration](#configuration) section above which includes complete sample files for both Apache and Nginx.
 

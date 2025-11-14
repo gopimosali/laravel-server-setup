@@ -1,0 +1,119 @@
+;------------------------------------------------------------
+; Laravel Reverb Supervisor Configuration
+;------------------------------------------------------------
+; Supervisor configuration for managing Laravel Reverb WebSocket server
+; Reverb provides first-party WebSocket support for Laravel applications
+;
+; Installation:
+; 1. Copy this file to /etc/supervisor/conf.d/
+;    sudo cp supervisor-reverb.conf.sample /etc/supervisor/conf.d/laravel-reverb.conf
+;
+; 2. Update the configuration below with your application details
+;
+; 3. Reload Supervisor:
+;    sudo supervisorctl reread
+;    sudo supervisorctl update
+;    sudo supervisorctl start laravel-reverb:*
+;------------------------------------------------------------
+
+[program:laravel-reverb]
+; The command to run - update the path to your Laravel application
+command=php /var/www/html/artisan reverb:start
+
+; User to run the process as (must match your web server user)
+; - Ubuntu/Debian with Apache or Nginx: www-data
+; - CentOS/RHEL with Apache: apache
+; - CentOS/RHEL with Nginx: nginx
+; Use the update-supervisor-user.sh script to automatically set this
+user=www-data
+
+; Number of processes to maintain
+numprocs=1
+
+; Process name format - used for identifying individual processes
+process_name=%(program_name)s_%(process_num)02d
+
+; Auto-start on supervisor start
+autostart=true
+
+; Auto-restart on unexpected termination
+autorestart=true
+
+; Redirect stderr to stdout
+redirect_stderr=true
+
+; Log file locations - create these directories if they don't exist
+stdout_logfile=/var/www/html/storage/logs/reverb.log
+stdout_logfile_maxbytes=10MB
+stdout_logfile_backups=5
+
+; How long to wait before considering the process started successfully
+startsecs=3
+
+; Stop wait timeout - time to wait for graceful shutdown before SIGKILL
+stopwaitsecs=60
+
+; Stop signal - TERM allows graceful shutdown
+stopsignal=TERM
+
+; Process priority (lower number = higher priority)
+priority=100
+
+
+;------------------------------------------------------------
+; CONFIGURATION CHECKLIST
+;------------------------------------------------------------
+; Before enabling this configuration, ensure:
+;
+; 1. Laravel Reverb is installed:
+;    composer require laravel/reverb
+;    php artisan reverb:install
+;
+; 2. Reverb is configured in your .env file:
+;    REVERB_APP_ID=your-app-id
+;    REVERB_APP_KEY=your-app-key
+;    REVERB_APP_SECRET=your-app-secret
+;    REVERB_HOST=0.0.0.0
+;    REVERB_PORT=8080
+;    REVERB_SCHEME=http
+;
+; 3. Update paths in this file:
+;    - command: Path to your Laravel installation
+;    - stdout_logfile: Path to your storage/logs directory
+;    - user: Web server user (www-data, nginx, apache, etc.)
+;
+; 4. Storage logs directory is writable:
+;    sudo chown -R www-data:www-data /var/www/html/storage/logs
+;
+; 5. Firewall allows WebSocket port (default 8080):
+;    sudo ufw allow 8080/tcp
+;
+;------------------------------------------------------------
+; MONITORING & MANAGEMENT
+;------------------------------------------------------------
+; Check status:
+;   sudo supervisorctl status laravel-reverb:*
+;
+; Start process:
+;   sudo supervisorctl start laravel-reverb:*
+;
+; Stop process:
+;   sudo supervisorctl stop laravel-reverb:*
+;
+; Restart process:
+;   sudo supervisorctl restart laravel-reverb:*
+;
+; View logs:
+;   sudo supervisorctl tail -f laravel-reverb:laravel-reverb_00 stdout
+;
+;------------------------------------------------------------
+; PRODUCTION CONSIDERATIONS
+;------------------------------------------------------------
+; 1. Use a process manager like systemd or supervisor (this file)
+; 2. Configure SSL/TLS for secure WebSocket connections (wss://)
+; 3. Use a reverse proxy (Nginx/Apache) for SSL termination
+; 4. Monitor memory usage and restart if needed
+; 5. Set up log rotation for the stdout_logfile
+; 6. Consider horizontal scaling for high-traffic applications
+; 7. Set appropriate REVERB_MAX_CONNECTIONS in .env
+;------------------------------------------------------------
