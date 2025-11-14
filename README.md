@@ -11,13 +11,15 @@ Automated installation script for PHP 8.4 with support for Ubuntu and Alpine Lin
 chmod +x laravel-server-setup.sh
 sudo ./laravel-server-setup.sh
 # Installs PHP 8.4 and web server (if needed)
+# Installs Git for repository deployments
 # Installs Supervisor
 
 # 2. Deploy your Laravel application (run for each app)
 chmod +x laravel-app-setup.sh
 sudo ./laravel-app-setup.sh
-# Enter Laravel app path
 # Choose user configuration (development/production)
+# SSH key generation for Git access
+# Choose deployment: Local directory OR Git repository
 # Select services (Horizon, Reverb, Pulse, Schedule)
 ```
 
@@ -45,6 +47,7 @@ That's it! Your Laravel application is now configured with proper permissions an
 
 - **OS Support**: Ubuntu and Alpine Linux
 - **PHP 8.4**: Latest PHP version with common extensions
+- **Git Deployment**: Automated SSH key generation and repository cloning
 - **All Database Clients**: MySQL and PostgreSQL extensions always installed
 - **Redis Extension**: Always installed for caching support
 - **Interactive Setup** (Ubuntu only):
@@ -417,10 +420,13 @@ sudo ./laravel-app-setup.sh
 ```
 
 This script will:
-- Prompt for Laravel application path
 - Let you choose user configuration:
   - **Development**: Use web server user (simpler)
   - **Production**: Create new dedicated user OR use existing user
+- Optionally generate SSH keys for Git access
+- Let you choose deployment source:
+  - **Local directory**: Use existing Laravel installation
+  - **Git repository**: Clone from GitHub/GitLab/Bitbucket
 - Set correct ownership and permissions for your Laravel app
 - Let you select which services to enable (Horizon, Reverb, Pulse, Schedule)
 - Copy and configure supervisor configs with correct user and paths
@@ -642,15 +648,95 @@ sudo ./fix-laravel-permissions.sh
 
 ### Complete Deployment Workflow
 
-This is the recommended approach for deploying Laravel applications:
+This repository supports **two deployment methods**:
+
+#### Method 1: Git Repository Deployment (Recommended for Production)
+
+Deploy directly from GitHub, GitLab, or Bitbucket with automatic SSH key setup:
 
 ```bash
 # 1. ONE-TIME: Prepare server (if not done already)
 cd /path/to/laravel-server-setup
 sudo ./laravel-server-setup.sh
-# This installs PHP, web server, and Supervisor
+# This installs PHP, web server, Git, and Supervisor
 
-# 2. Install Laravel
+# 2. Deploy from Git repository
+sudo ./laravel-app-setup.sh
+
+# Follow the prompts:
+# Step 1/6: Choose user (Production - Create new dedicated user)
+#   - Creates user with sudo access
+#   - Generates SSH key automatically
+#   - Displays public key to add to GitHub/GitLab/Bitbucket
+
+# Step 2/6: Choose deployment source (Git repository)
+#   - Enter repository URL: git@github.com:username/myapp.git
+#   - Enter target directory: /var/www/myapp
+#   - Repository is cloned automatically
+#   - Optional: checkout specific branch
+
+# Step 3/6: Validates Laravel application
+# Step 4/6: Sets proper permissions automatically
+# Step 5/6: Select services (e.g., 1 2 4 for Horizon, Reverb, Schedule)
+# Step 6/6: Services are started
+
+# 3. Configure environment (inside cloned repository)
+cd /var/www/myapp
+cp .env.example .env
+nano .env
+# Set DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD, etc.
+php artisan key:generate
+php artisan migrate
+
+# 4. Install and build frontend (if Node.js installed)
+npm install
+npm run build  # For production
+
+# 5. Done! Your Git-deployed app is running
+sudo supervisorctl status
+```
+
+**Future deployments from Git (as your dedicated user):**
+```bash
+# Switch to your Laravel user
+su - laraveladmin  # or your chosen username
+
+# Update from Git
+cd /var/www/myapp
+git pull origin main
+
+# Update dependencies and rebuild
+composer install --no-dev --optimize-autoloader
+npm install && npm run build
+php artisan migrate --force
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+
+# Restart services
+php artisan horizon:terminate  # Graceful restart for Horizon
+sudo supervisorctl restart laravel-reverb:*
+sudo supervisorctl restart laravel-pulse:*
+```
+
+**Benefits of Git Deployment:**
+- ✅ Automated SSH key generation and setup
+- ✅ Direct deployment from your repository
+- ✅ Easy updates with `git pull`
+- ✅ Version control integration
+- ✅ Proper file ownership and permissions
+- ✅ Branch management support
+
+#### Method 2: Local Directory Deployment
+
+Deploy from an existing directory on the server:
+
+```bash
+# 1. ONE-TIME: Prepare server (if not done already)
+cd /path/to/laravel-server-setup
+sudo ./laravel-server-setup.sh
+
+# 2. Install Laravel locally
 cd /var/www
 composer create-project laravel/laravel my-app
 cd my-app
@@ -658,31 +744,61 @@ cd my-app
 # 3. Configure environment
 cp .env.example .env
 php artisan key:generate
-
-# 4. Configure database
-nano .env
-# Set DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD
-
-# 5. Run migrations
+nano .env  # Configure database, etc.
 php artisan migrate
 
-# 6. Install and build frontend (if Node.js installed)
+# 4. Install and build frontend (if Node.js installed)
 npm install
 npm run build  # For production
 
-# 7. Deploy with app setup script
+# 5. Deploy with app setup script
 cd /path/to/laravel-server-setup
 sudo ./laravel-app-setup.sh
-# Enter: /var/www/my-app
-# Choose user: Development (web server) or Production (dedicated user)
-# Select services: e.g., 1 2 4 (for Horizon, Reverb, Schedule)
 
-# 8. Done! Services are configured and running
+# Follow the prompts:
+# Step 1/6: Choose user (Development or Production)
+# Step 2/6: Choose deployment source (Local directory)
+# Step 3/6: Enter path: /var/www/my-app
+# Step 4/6: Permissions set automatically
+# Step 5/6: Select services
+# Step 6/6: Services started
+
+# 6. Done! Services are configured and running
 sudo supervisorctl status
 ```
 
 **For additional Laravel apps on the same server:**
-Just run `sudo ./laravel-app-setup.sh` again - it will let you choose user configuration for each app!
+Just run `sudo ./laravel-app-setup.sh` again - it will let you choose user configuration and deployment method for each app!
+
+### SSH Key Management for Git
+
+The setup script automatically handles SSH keys, but here's what happens:
+
+**For new users (Production - Create new dedicated user):**
+1. User is created with home directory and sudo access
+2. Script offers to generate SSH key (ED25519)
+3. Public key is displayed with instructions
+4. You add the key to GitHub/GitLab/Bitbucket
+5. Git deployment becomes available
+
+**For existing users (Production - Use existing user):**
+1. Script checks if SSH key already exists
+2. If yes: offers to display it
+3. If no: offers to generate new key
+4. Same workflow as new users
+
+**Supported Git Hosting Services:**
+- **GitHub**: Settings → SSH and GPG keys → New SSH key
+- **GitLab**: Preferences → SSH Keys → Add new key
+- **Bitbucket**: Personal settings → SSH keys → Add key
+
+**Manual SSH Key Display:**
+```bash
+# If you need to view your SSH public key later
+cat ~/.ssh/id_ed25519.pub
+# or
+cat ~/.ssh/id_rsa.pub
+```
 
 ### Manual Deployment (Advanced)
 
