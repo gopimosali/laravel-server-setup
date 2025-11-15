@@ -523,6 +523,56 @@ case $DEPLOY_CHOICE in
             fi
         fi
 
+        # Test SSH connection to Git host
+        if [ -n "$GIT_HOST" ] && [[ "$GIT_REPO_URL" =~ ^git@ ]]; then
+            echo ""
+            log_info "Testing SSH connection to $GIT_HOST..."
+
+            # Test SSH connection as the user
+            SSH_TEST_OUTPUT=$(su - "$FINAL_USER" -c "ssh -T git@$GIT_HOST 2>&1" || true)
+
+            if echo "$SSH_TEST_OUTPUT" | grep -q "successfully authenticated"; then
+                log_success "SSH authentication successful"
+            elif echo "$SSH_TEST_OUTPUT" | grep -q "Permission denied"; then
+                log_error "SSH authentication failed!"
+                echo ""
+                echo "The SSH key is not recognized by $GIT_HOST"
+                echo ""
+                echo "To fix this:"
+                echo "1. Display your public key:"
+                if [ -f "$SSH_KEY_ED25519.pub" ]; then
+                    echo "   cat $SSH_KEY_ED25519.pub"
+                elif [ -f "$SSH_KEY_RSA.pub" ]; then
+                    echo "   cat $SSH_KEY_RSA.pub"
+                fi
+                echo ""
+                echo "2. Add it to your Git provider:"
+                echo "   • GitHub: https://github.com/settings/keys"
+                echo "   • GitLab: https://gitlab.com/-/profile/keys"
+                echo "   • Bitbucket: https://bitbucket.org/account/settings/ssh-keys/"
+                echo ""
+                read -p "Display the public key now? [Y/n]: " show_key
+                if [[ ! "$show_key" =~ ^[Nn]$ ]]; then
+                    echo ""
+                    echo "========================================="
+                    echo "  Copy this key to your Git provider:"
+                    echo "========================================="
+                    if [ -f "$SSH_KEY_ED25519.pub" ]; then
+                        cat "$SSH_KEY_ED25519.pub"
+                    elif [ -f "$SSH_KEY_RSA.pub" ]; then
+                        cat "$SSH_KEY_RSA.pub"
+                    fi
+                    echo "========================================="
+                    echo ""
+                    read -p "Press Enter after adding the key to continue..."
+                else
+                    exit 1
+                fi
+            else
+                log_warn "Could not verify SSH connection (this may be normal)"
+            fi
+        fi
+
         # Clone repository as the user
         echo ""
         log_info "Cloning repository..."
