@@ -282,11 +282,22 @@ if [[ ! "$setup_sudo" =~ ^[Nn]$ ]]; then
             echo ""
             read -p "Enable passwordless sudo for '$SUDO_USERNAME'? (Recommended for Docker/testing) [y/N]: " passwordless_sudo
             if [[ "$passwordless_sudo" =~ ^[Yy]$ ]]; then
-                # Create sudoers.d file (safer than editing /etc/sudoers directly)
-                SUDOERS_FILE="/etc/sudoers.d/laravel-$SUDO_USERNAME"
-                echo "$SUDO_USERNAME ALL=(ALL) NOPASSWD:ALL" > "$SUDOERS_FILE"
-                chmod 440 "$SUDOERS_FILE"
-                log_success "Passwordless sudo enabled for '$SUDO_USERNAME'"
+                # Check if sudoers.d directory exists
+                if [ -d "/etc/sudoers.d" ]; then
+                    # Create sudoers.d file (safer than editing /etc/sudoers directly)
+                    SUDOERS_FILE="/etc/sudoers.d/laravel-$SUDO_USERNAME"
+                    echo "$SUDO_USERNAME ALL=(ALL) NOPASSWD:ALL" > "$SUDOERS_FILE"
+                    chmod 440 "$SUDOERS_FILE"
+                    log_success "Passwordless sudo enabled for '$SUDO_USERNAME'"
+                else
+                    # Fallback: append to /etc/sudoers if sudoers.d doesn't exist
+                    if ! grep -q "^$SUDO_USERNAME ALL=(ALL) NOPASSWD:ALL" /etc/sudoers 2>/dev/null; then
+                        echo "$SUDO_USERNAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+                        log_success "Passwordless sudo enabled for '$SUDO_USERNAME'"
+                    else
+                        log_info "Passwordless sudo already enabled for '$SUDO_USERNAME'"
+                    fi
+                fi
                 log_warn "Note: This is convenient but less secure. Only use in development/testing!"
             fi
 
