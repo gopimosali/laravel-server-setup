@@ -72,11 +72,40 @@ echo ""
 log_step "Step 1/6: User Configuration"
 echo ""
 
+# Check if run with sudo - auto-detect the sudo user
+SUDO_DETECTED_USER=""
+if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
+    SUDO_DETECTED_USER="$SUDO_USER"
+    log_info "Detected: Running as root via 'sudo' by user '$SUDO_DETECTED_USER'"
+    echo ""
+fi
+
 # Check for previous app configuration
 APP_CONFIG_FILE="$SCRIPT_DIR/.laravel-app-config"
 PREVIOUS_USER=""
 
-if [ -f "$APP_CONFIG_FILE" ]; then
+# Priority: sudo user > previous user
+if [ -n "$SUDO_DETECTED_USER" ]; then
+    # Suggest the sudo user
+    if id "$SUDO_DETECTED_USER" &>/dev/null; then
+        log_info "Recommended: Use '$SUDO_DETECTED_USER' (your account) for Laravel services"
+        echo "  ✓ Your SSH keys will be used for Git operations"
+        echo "  ✓ Application will be cloned to your home directory"
+        echo ""
+        read -p "Use '$SUDO_DETECTED_USER' for Laravel services? [Y/n]: " use_sudo_user
+        if [[ ! "$use_sudo_user" =~ ^[Nn]$ ]]; then
+            FINAL_USER=$SUDO_DETECTED_USER
+            USER_SELECTED=true
+            log_success "Using user: $FINAL_USER"
+            echo ""
+        else
+            USER_SELECTED=false
+        fi
+    else
+        log_warn "Sudo user '$SUDO_DETECTED_USER' not found in system"
+        USER_SELECTED=false
+    fi
+elif [ -f "$APP_CONFIG_FILE" ]; then
     source "$APP_CONFIG_FILE"
     if [ -n "$SUPERVISOR_USER" ]; then
         PREVIOUS_USER=$SUPERVISOR_USER
@@ -520,6 +549,56 @@ case $DEPLOY_CHOICE in
                 chown "$FINAL_USER:$FINAL_USER" "$KNOWN_HOSTS"
                 chmod 644 "$KNOWN_HOSTS"
                 log_success "Created known_hosts and added $GIT_HOST"
+            fi
+        fi
+
+        # Test SSH connection to Git host
+        if [ -n "$GIT_HOST" ] && [[ "$GIT_REPO_URL" =~ ^git@ ]]; then
+            echo ""
+            log_info "Testing SSH connection to $GIT_HOST..."
+
+            # Test SSH connection as the user
+            SSH_TEST_OUTPUT=$(su - "$FINAL_USER" -c "ssh -T git@$GIT_HOST 2>&1" || true)
+
+            if echo "$SSH_TEST_OUTPUT" | grep -q "successfully authenticated"; then
+                log_success "SSH authentication successful"
+            elif echo "$SSH_TEST_OUTPUT" | grep -q "Permission denied"; then
+                log_error "SSH authentication failed!"
+                echo ""
+                echo "The SSH key is not recognized by $GIT_HOST"
+                echo ""
+                echo "To fix this:"
+                echo "1. Display your public key:"
+                if [ -f "$SSH_KEY_ED25519.pub" ]; then
+                    echo "   cat $SSH_KEY_ED25519.pub"
+                elif [ -f "$SSH_KEY_RSA.pub" ]; then
+                    echo "   cat $SSH_KEY_RSA.pub"
+                fi
+                echo ""
+                echo "2. Add it to your Git provider:"
+                echo "   • GitHub: https://github.com/settings/keys"
+                echo "   • GitLab: https://gitlab.com/-/profile/keys"
+                echo "   • Bitbucket: https://bitbucket.org/account/settings/ssh-keys/"
+                echo ""
+                read -p "Display the public key now? [Y/n]: " show_key
+                if [[ ! "$show_key" =~ ^[Nn]$ ]]; then
+                    echo ""
+                    echo "========================================="
+                    echo "  Copy this key to your Git provider:"
+                    echo "========================================="
+                    if [ -f "$SSH_KEY_ED25519.pub" ]; then
+                        cat "$SSH_KEY_ED25519.pub"
+                    elif [ -f "$SSH_KEY_RSA.pub" ]; then
+                        cat "$SSH_KEY_RSA.pub"
+                    fi
+                    echo "========================================="
+                    echo ""
+                    read -p "Press Enter after adding the key to continue..."
+                else
+                    exit 1
+                fi
+            else
+                log_warn "Could not verify SSH connection (this may be normal)"
             fi
         fi
 
