@@ -211,8 +211,8 @@ echo ""
 log_step "Saving Server Configuration"
 echo ""
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_FILE="$SCRIPT_DIR/.laravel-server-config"
+# Use system-wide config location so it's accessible from anywhere
+CONFIG_FILE="/etc/laravel-server.conf"
 
 cat > "$CONFIG_FILE" << EOF
 # Laravel Server Configuration
@@ -224,8 +224,9 @@ WEB_SERVER_USER=$WEB_SERVER_USER
 WEB_SERVER_GROUP=$WEB_SERVER_GROUP
 EOF
 
-chmod 600 "$CONFIG_FILE"
+chmod 644 "$CONFIG_FILE"
 log_success "Configuration saved to $CONFIG_FILE"
+log_info "This config can be accessed from any directory"
 
 echo ""
 

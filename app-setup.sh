@@ -51,12 +51,21 @@ fi
 
 # Load server configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SERVER_CONFIG_FILE="$SCRIPT_DIR/.laravel-server-config"
 
-if [ ! -f "$SERVER_CONFIG_FILE" ]; then
+# Try system-wide config first, then fall back to local config (for backward compatibility)
+if [ -f "/etc/laravel-server.conf" ]; then
+    SERVER_CONFIG_FILE="/etc/laravel-server.conf"
+elif [ -f "$SCRIPT_DIR/.laravel-server-config" ]; then
+    SERVER_CONFIG_FILE="$SCRIPT_DIR/.laravel-server-config"
+    log_warn "Using local config file. Consider running server-setup.sh again to create system-wide config."
+else
     log_error "Server configuration not found!"
     echo ""
     echo "Please run ./server-setup.sh first to prepare your server."
+    echo ""
+    echo "Looking for config at:"
+    echo "  - /etc/laravel-server.conf (system-wide)"
+    echo "  - $SCRIPT_DIR/.laravel-server-config (local)"
     exit 1
 fi
 
@@ -81,7 +90,8 @@ if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
 fi
 
 # Check for previous app configuration
-APP_CONFIG_FILE="$SCRIPT_DIR/.laravel-app-config"
+# Use system-wide location for consistency
+APP_CONFIG_FILE="/etc/laravel-app.conf"
 PREVIOUS_USER=""
 
 # Priority: sudo user > previous user
@@ -858,7 +868,7 @@ LAST_APP_PATH=$LARAVEL_PATH
 DEPLOYMENT_METHOD=$DEPLOYMENT_METHOD
 EOF
 
-chmod 600 "$APP_CONFIG_FILE"
+chmod 644 "$APP_CONFIG_FILE"
 
 # Display summary
 echo "========================================="
