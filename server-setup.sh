@@ -174,6 +174,58 @@ if command -v supervisorctl &>/dev/null; then
     log_info "Supervisor is already installed"
     SUPERVISOR_VERSION=$(supervisorctl version 2>/dev/null || echo "unknown")
     log_info "Version: $SUPERVISOR_VERSION"
+
+    # Check if Supervisor is running and start if needed
+    if ! supervisorctl status &>/dev/null; then
+        log_warn "Supervisor daemon is not running"
+        log_info "Starting Supervisor..."
+
+        # Try different methods to start Supervisor
+        if systemctl is-active --quiet supervisor 2>/dev/null || systemctl is-active --quiet supervisord 2>/dev/null; then
+            log_success "Supervisor is already running via systemd"
+        elif command -v systemctl &>/dev/null; then
+            # Try systemd first
+            if systemctl start supervisor 2>/dev/null || systemctl start supervisord 2>/dev/null; then
+                log_success "Started Supervisor via systemd"
+            else
+                # Fallback to service command
+                if service supervisor start 2>/dev/null || service supervisord start 2>/dev/null; then
+                    log_success "Started Supervisor via service"
+                else
+                    # Last resort: run supervisord directly
+                    if [ -f /etc/supervisor/supervisord.conf ]; then
+                        supervisord -c /etc/supervisor/supervisord.conf
+                        log_success "Started Supervisor daemon directly"
+                    elif [ -f /etc/supervisord.conf ]; then
+                        supervisord -c /etc/supervisord.conf
+                        log_success "Started Supervisor daemon directly"
+                    else
+                        log_error "Could not start Supervisor daemon"
+                        log_info "You may need to start it manually: sudo supervisord"
+                    fi
+                fi
+            fi
+        else
+            # No systemd, try service command
+            if service supervisor start 2>/dev/null || service supervisord start 2>/dev/null; then
+                log_success "Started Supervisor via service"
+            else
+                # Run supervisord directly
+                if [ -f /etc/supervisor/supervisord.conf ]; then
+                    supervisord -c /etc/supervisor/supervisord.conf
+                    log_success "Started Supervisor daemon directly"
+                elif [ -f /etc/supervisord.conf ]; then
+                    supervisord -c /etc/supervisord.conf
+                    log_success "Started Supervisor daemon directly"
+                else
+                    log_error "Could not start Supervisor daemon"
+                    log_info "You may need to start it manually: sudo supervisord"
+                fi
+            fi
+        fi
+    else
+        log_success "Supervisor daemon is running"
+    fi
 else
     read -p "Supervisor is not installed. Install now? [Y/n]: " install_supervisor
     if [[ ! "$install_supervisor" =~ ^[Nn]$ ]]; then
