@@ -451,12 +451,27 @@ case $DEPLOY_CHOICE in
         fi
 
         echo ""
-        read -p "Enter target directory for cloning (e.g., /var/www/myapp): " GIT_TARGET_DIR
+        # Get user's home directory
+        USER_HOME=$(eval echo ~$FINAL_USER)
 
-        # Validate target directory
+        # Suggest a default path in user's home directory
+        # Extract repo name from URL if possible
+        if [[ "$GIT_REPO_URL" =~ ([^/]+)\.git$ ]]; then
+            REPO_NAME="${BASH_REMATCH[1]}"
+            SUGGESTED_DIR="$USER_HOME/$REPO_NAME"
+        else
+            SUGGESTED_DIR="$USER_HOME/laravel-app"
+        fi
+
+        log_info "Recommended: Clone to user's home directory to avoid permission issues"
+        echo "Suggested path: $SUGGESTED_DIR"
+        echo ""
+        read -p "Enter target directory for cloning [default: $SUGGESTED_DIR]: " GIT_TARGET_DIR
+
+        # Use suggested directory if empty
         if [ -z "$GIT_TARGET_DIR" ]; then
-            log_error "Target directory cannot be empty"
-            exit 1
+            GIT_TARGET_DIR="$SUGGESTED_DIR"
+            log_info "Using default: $GIT_TARGET_DIR"
         fi
 
         # Check if directory already exists
@@ -471,6 +486,19 @@ case $DEPLOY_CHOICE in
         if [ ! -d "$PARENT_DIR" ]; then
             log_info "Creating parent directory: $PARENT_DIR"
             mkdir -p "$PARENT_DIR"
+            # Set ownership so user can create subdirectories
+            chown "$FINAL_USER:$WEB_SERVER_GROUP" "$PARENT_DIR"
+            chmod 755 "$PARENT_DIR"
+            log_success "Parent directory created with proper permissions"
+        else
+            # Verify user has write permissions to existing parent directory
+            if ! su - "$FINAL_USER" -c "test -w '$PARENT_DIR'" 2>/dev/null; then
+                log_warn "User '$FINAL_USER' may not have write permissions to $PARENT_DIR"
+                log_info "Setting ownership to allow cloning..."
+                chown "$FINAL_USER:$WEB_SERVER_GROUP" "$PARENT_DIR"
+                chmod 755 "$PARENT_DIR"
+                log_success "Permissions updated"
+            fi
         fi
 
         # Add Git host to known_hosts
