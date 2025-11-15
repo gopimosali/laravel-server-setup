@@ -228,6 +228,78 @@ chmod 600 "$CONFIG_FILE"
 log_success "Configuration saved to $CONFIG_FILE"
 
 echo ""
+
+# Configure sudo access for non-root users
+log_step "Configure Sudo Access (Optional)"
+echo ""
+
+log_info "To use the recommended workflow (sudo ./app-setup.sh), your user needs sudo privileges"
+echo ""
+read -p "Set up sudo access for a user? [Y/n]: " setup_sudo
+
+if [[ ! "$setup_sudo" =~ ^[Nn]$ ]]; then
+    echo ""
+    echo "Available users (UID >= 1000):"
+    awk -F: '$3 >= 1000 && $3 < 65534 {print "  - " $1}' /etc/passwd
+    echo ""
+    read -p "Enter username to grant sudo access: " SUDO_USERNAME
+
+    if [ -z "$SUDO_USERNAME" ]; then
+        log_warn "No username provided, skipping sudo setup"
+    elif ! id "$SUDO_USERNAME" &>/dev/null; then
+        log_error "User '$SUDO_USERNAME' does not exist"
+    else
+        # Detect sudo group
+        SUDO_GROUP=""
+        case $OS in
+            ubuntu|debian)
+                SUDO_GROUP="sudo"
+                ;;
+            centos|rhel|fedora|rocky|almalinux)
+                SUDO_GROUP="wheel"
+                ;;
+            *)
+                if getent group sudo &>/dev/null; then
+                    SUDO_GROUP="sudo"
+                elif getent group wheel &>/dev/null; then
+                    SUDO_GROUP="wheel"
+                fi
+                ;;
+        esac
+
+        if [ -z "$SUDO_GROUP" ]; then
+            log_error "Could not detect sudo group for this OS"
+        else
+            # Add user to sudo group
+            if groups "$SUDO_USERNAME" | grep -q "\b$SUDO_GROUP\b"; then
+                log_info "User '$SUDO_USERNAME' already in $SUDO_GROUP group"
+            else
+                usermod -aG "$SUDO_GROUP" "$SUDO_USERNAME"
+                log_success "Added '$SUDO_USERNAME' to $SUDO_GROUP group"
+            fi
+
+            # Ask about passwordless sudo (useful for Docker/testing)
+            echo ""
+            read -p "Enable passwordless sudo for '$SUDO_USERNAME'? (Recommended for Docker/testing) [y/N]: " passwordless_sudo
+            if [[ "$passwordless_sudo" =~ ^[Yy]$ ]]; then
+                # Create sudoers.d file (safer than editing /etc/sudoers directly)
+                SUDOERS_FILE="/etc/sudoers.d/laravel-$SUDO_USERNAME"
+                echo "$SUDO_USERNAME ALL=(ALL) NOPASSWD:ALL" > "$SUDOERS_FILE"
+                chmod 440 "$SUDOERS_FILE"
+                log_success "Passwordless sudo enabled for '$SUDO_USERNAME'"
+                log_warn "Note: This is convenient but less secure. Only use in development/testing!"
+            fi
+
+            echo ""
+            log_success "Sudo access configured for '$SUDO_USERNAME'"
+
+            # Save the sudo username for the next steps message
+            CONFIGURED_SUDO_USER="$SUDO_USERNAME"
+        fi
+    fi
+fi
+
+echo ""
 echo "========================================="
 echo "  Server Setup Complete!"
 echo "========================================="
@@ -253,22 +325,44 @@ echo "========================================="
 echo ""
 echo "Deploy your Laravel application:"
 echo ""
-echo "Option 1 (Recommended):"
-echo "  1. Switch to your user account:"
-echo "     su - yourusername"
-echo ""
-echo "  2. Navigate to setup directory:"
-echo "     cd /root/php-server-setup  # or wherever you cloned this"
-echo ""
-echo "  3. Run app setup with sudo:"
-echo "     sudo ./app-setup.sh"
-echo ""
-echo "  Benefits: Uses your SSH keys, clones to ~/your-app automatically"
-echo ""
-echo "Option 2:"
-echo "  Run directly as root:"
-echo "     sudo ./app-setup.sh"
-echo ""
+
+# Show personalized instructions if sudo was configured
+if [ -n "$CONFIGURED_SUDO_USER" ]; then
+    echo "Recommended workflow (using your configured user):"
+    echo ""
+    echo "  1. Switch to $CONFIGURED_SUDO_USER:"
+    echo "     su - $CONFIGURED_SUDO_USER"
+    echo ""
+    echo "  2. Navigate to setup directory:"
+    echo "     cd $SCRIPT_DIR"
+    echo ""
+    echo "  3. Run app setup with sudo:"
+    echo "     sudo ./app-setup.sh"
+    echo ""
+    echo "  Benefits:"
+    echo "    ✓ Uses $CONFIGURED_SUDO_USER's SSH keys for Git operations"
+    echo "    ✓ Clones to /home/$CONFIGURED_SUDO_USER/your-app automatically"
+    echo "    ✓ Clean permissions and ownership from the start"
+    echo ""
+else
+    echo "Option 1 (Recommended):"
+    echo "  1. Switch to your user account:"
+    echo "     su - yourusername"
+    echo ""
+    echo "  2. Navigate to setup directory:"
+    echo "     cd $SCRIPT_DIR"
+    echo ""
+    echo "  3. Run app setup with sudo:"
+    echo "     sudo ./app-setup.sh"
+    echo ""
+    echo "  Benefits: Uses your SSH keys, clones to ~/your-app automatically"
+    echo ""
+    echo "Option 2:"
+    echo "  Run directly as root:"
+    echo "     ./app-setup.sh"
+    echo ""
+fi
+
 echo "The app setup script will:"
 echo "  • Configure user and permissions for your Laravel app"
 echo "  • Clone from Git or use local directory"
@@ -276,3 +370,16 @@ echo "  • Set up supervisor services (Horizon, Reverb, Pulse, Schedule)"
 echo ""
 
 log_success "Server ready for Laravel applications!"
+
+# Offer to switch to configured user automatically
+if [ -n "$CONFIGURED_SUDO_USER" ]; then
+    echo ""
+    read -p "Switch to $CONFIGURED_SUDO_USER now and continue? [Y/n]: " switch_user
+    if [[ ! "$switch_user" =~ ^[Nn]$ ]]; then
+        log_info "Switching to $CONFIGURED_SUDO_USER..."
+        log_info "Run: cd $SCRIPT_DIR && sudo ./app-setup.sh"
+        echo ""
+        # Switch to user and change to their home directory
+        exec su - "$CONFIGURED_SUDO_USER"
+    fi
+fi
