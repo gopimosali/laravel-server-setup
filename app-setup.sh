@@ -72,11 +72,40 @@ echo ""
 log_step "Step 1/6: User Configuration"
 echo ""
 
+# Check if run with sudo - auto-detect the sudo user
+SUDO_DETECTED_USER=""
+if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
+    SUDO_DETECTED_USER="$SUDO_USER"
+    log_info "Detected: Running as root via 'sudo' by user '$SUDO_DETECTED_USER'"
+    echo ""
+fi
+
 # Check for previous app configuration
 APP_CONFIG_FILE="$SCRIPT_DIR/.laravel-app-config"
 PREVIOUS_USER=""
 
-if [ -f "$APP_CONFIG_FILE" ]; then
+# Priority: sudo user > previous user
+if [ -n "$SUDO_DETECTED_USER" ]; then
+    # Suggest the sudo user
+    if id "$SUDO_DETECTED_USER" &>/dev/null; then
+        log_info "Recommended: Use '$SUDO_DETECTED_USER' (your account) for Laravel services"
+        echo "  ✓ Your SSH keys will be used for Git operations"
+        echo "  ✓ Application will be cloned to your home directory"
+        echo ""
+        read -p "Use '$SUDO_DETECTED_USER' for Laravel services? [Y/n]: " use_sudo_user
+        if [[ ! "$use_sudo_user" =~ ^[Nn]$ ]]; then
+            FINAL_USER=$SUDO_DETECTED_USER
+            USER_SELECTED=true
+            log_success "Using user: $FINAL_USER"
+            echo ""
+        else
+            USER_SELECTED=false
+        fi
+    else
+        log_warn "Sudo user '$SUDO_DETECTED_USER' not found in system"
+        USER_SELECTED=false
+    fi
+elif [ -f "$APP_CONFIG_FILE" ]; then
     source "$APP_CONFIG_FILE"
     if [ -n "$SUPERVISOR_USER" ]; then
         PREVIOUS_USER=$SUPERVISOR_USER
