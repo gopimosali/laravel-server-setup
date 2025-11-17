@@ -295,13 +295,84 @@ if [[ ! "$setup_sudo" =~ ^[Nn]$ ]]; then
     echo "Available users (UID >= 1000):"
     awk -F: '$3 >= 1000 && $3 < 65534 {print "  - " $1}' /etc/passwd
     echo ""
-    read -p "Enter username to grant sudo access: " SUDO_USERNAME
+    read -p "Enter username to grant sudo access (or create new user): " SUDO_USERNAME
 
     if [ -z "$SUDO_USERNAME" ]; then
         log_warn "No username provided, skipping sudo setup"
     elif ! id "$SUDO_USERNAME" &>/dev/null; then
-        log_error "User '$SUDO_USERNAME' does not exist"
-    else
+        # User doesn't exist, offer to create it
+        log_warn "User '$SUDO_USERNAME' does not exist"
+        echo ""
+        read -p "Create user '$SUDO_USERNAME'? [Y/n]: " create_user
+
+        if [[ ! "$create_user" =~ ^[Nn]$ ]]; then
+            log_info "Creating user '$SUDO_USERNAME'..."
+
+            # Validate username format
+            if ! [[ "$SUDO_USERNAME" =~ ^[a-z_][a-z0-9_-]*$ ]]; then
+                log_error "Invalid username format. Must start with lowercase letter or underscore."
+                exit 1
+            fi
+
+            # Create user with home directory
+            useradd -m -s /bin/bash "$SUDO_USERNAME"
+
+            if [ $? -eq 0 ]; then
+                log_success "User '$SUDO_USERNAME' created"
+
+                # Set password
+                echo ""
+                log_info "Set password for '$SUDO_USERNAME'"
+                passwd "$SUDO_USERNAME"
+
+                if [ $? -ne 0 ]; then
+                    log_error "Failed to set password"
+                    exit 1
+                fi
+
+                # Generate SSH key
+                echo ""
+                read -p "Generate SSH key for '$SUDO_USERNAME'? [Y/n]: " gen_ssh
+                if [[ ! "$gen_ssh" =~ ^[Nn]$ ]]; then
+                    USER_HOME=$(eval echo ~$SUDO_USERNAME)
+                    SSH_DIR="$USER_HOME/.ssh"
+                    SSH_KEY="$SSH_DIR/id_ed25519"
+
+                    mkdir -p "$SSH_DIR"
+                    chmod 700 "$SSH_DIR"
+                    chown "$SUDO_USERNAME:$SUDO_USERNAME" "$SSH_DIR"
+
+                    su - "$SUDO_USERNAME" -c "ssh-keygen -t ed25519 -f $SSH_KEY -N '' -C '$SUDO_USERNAME@$(hostname)'"
+
+                    if [ $? -eq 0 ]; then
+                        log_success "SSH key generated"
+                        echo ""
+                        echo "========================================="
+                        echo "  Public SSH Key for $SUDO_USERNAME"
+                        echo "========================================="
+                        cat "$SSH_KEY.pub"
+                        echo "========================================="
+                        echo ""
+                        echo "Add this to your Git provider:"
+                        echo "  • GitHub: https://github.com/settings/keys"
+                        echo "  • GitLab: https://gitlab.com/-/profile/keys"
+                        echo "  • Bitbucket: https://bitbucket.org/account/settings/ssh-keys/"
+                        echo ""
+                        read -p "Press Enter to continue..."
+                    fi
+                fi
+            else
+                log_error "Failed to create user '$SUDO_USERNAME'"
+                exit 1
+            fi
+        else
+            log_info "Skipping user creation and sudo setup"
+            SUDO_USERNAME=""
+        fi
+    fi
+
+    # Continue with sudo setup if we have a valid user
+    if [ -n "$SUDO_USERNAME" ] && id "$SUDO_USERNAME" &>/dev/null; then
         # Detect sudo group
         SUDO_GROUP=""
         case $OS in
